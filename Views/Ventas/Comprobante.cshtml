@@ -1,0 +1,93 @@
+@model MiniMarket.Web.Models.ComprobanteFiscal
+@{
+    ViewData["Title"] = "Comprobante electrónico";
+    var venta = (MiniMarket.Web.Models.Venta)ViewBag.Venta;
+    var ambiente = (string)ViewBag.FiscalAmbiente ?? "QA";
+    var produccion = ViewBag.FiscalProduccion == true;
+    var tasaIgv = (decimal)ViewBag.IgvPorcentaje;
+    var igv = decimal.Round(venta.Total * tasaIgv / (100m + tasaIgv), 2, MidpointRounding.AwayFromZero);
+    var tipo = venta.Cliente?.Documento?.Trim().Length == 11 ? "Factura" : "Boleta";
+    var puedeEmitir = ViewBag.FiscalHabilitado == true && User.IsInRole("Administrador") && venta.Estado == "Activa" &&
+        venta.EstadoEmision is "Pendiente" or "No enviada (QA desactivado)" or "No enviada (configuración)";
+}
+<div class="amaya-page-heading">
+    <div><h2>Comprobante electrónico</h2><p>Venta #@venta.Id · Factiliza @ambiente</p></div>
+    <a asp-action="Index" class="btn btn-outline-secondary">Volver al historial</a>
+</div>
+@if (TempData["ErrorFiscal"] is string error) { <div class="alert alert-danger" role="alert">@error</div> }
+@if (produccion) {
+    <div class="alert alert-danger"><strong>Entorno de producción.</strong> Al confirmar, el comprobante será enviado realmente a SUNAT.</div>
+}
+<section class="card"><div class="card-body p-4">
+    <div class="row g-3 mb-4">
+        <div class="col-md-6"><strong>Cliente</strong><div>@(venta.Cliente?.Nombre ?? "Público general")</div></div>
+        <div class="col-md-3"><strong>Documento</strong><div>@(venta.Cliente?.Documento ?? "Sin documento")</div></div>
+        <div class="col-md-3"><strong>Tipo previsto</strong><div>@tipo</div></div>
+        <div class="col-md-4"><strong>Total</strong><div>S/. @venta.Total.ToString("N2")</div></div>
+        <div class="col-md-4"><strong>IGV incluido (@tasaIgv.ToString("N0")%)</strong><div>S/. @igv.ToString("N2")</div></div>
+        <div class="col-md-4"><strong>Estado fiscal</strong><div>@venta.EstadoEmision</div></div>
+    </div>
+
+    @if (Model == null) {
+        @if (ViewBag.FiscalHabilitado != true) {
+            <h4>Facturación no disponible</h4>
+            <p>La integración fiscal está desactivada o incompleta para este entorno.</p>
+        } else if (puedeEmitir) {
+            var titulo = produccion ? "¿Emitir comprobante real?" : "¿Emitir comprobante en QA?";
+            var texto = produccion
+                ? "Se enviará a Factiliza Producción y tendrá efecto tributario ante SUNAT. Esta acción no es una vista previa."
+                : "Se enviará el comprobante al entorno de pruebas de Factiliza.";
+            <form asp-action="EmitirComprobante" asp-route-id="@venta.Id" method="post" class="js-swal-confirm"
+                  data-swal-title="@titulo" data-swal-text="@texto">
+                @if (produccion) {
+                    <div class="mb-3">
+                        <label for="claveAdministrador" class="form-label">Confirma tu contraseña de administrador</label>
+                        <input id="claveAdministrador" name="claveAdministrador" type="password" class="form-control" required autocomplete="current-password" />
+                    </div>
+                }
+                <button class="btn @(produccion ? "btn-danger" : "btn-primary")">Emitir comprobante @ambiente</button>
+            </form>
+        } else {
+            <p>No hay un comprobante fiscal guardado. Solo un administrador puede emitir una venta activa pendiente.</p>
+        }
+    } else {
+        <h4>@Model.Serie-@Model.Correlativo.ToString("D8") · @Model.Estado</h4>
+        <p><strong>Respuesta:</strong> @Model.Mensaje</p>
+        @if (User.IsInRole("Administrador") && venta.Estado == "Activa" && Model.Estado == "No enviada (datos)") {
+            <form asp-action="EmitirComprobante" asp-route-id="@venta.Id" method="post" class="js-swal-confirm mb-3"
+                  data-swal-title="¿Emitir tras corregir los datos?" data-swal-text="No hubo envío previo. Se conservará el mismo número reservado.">
+                @if (produccion) {
+                    <div class="mb-3">
+                        <label for="claveReintento" class="form-label">Confirma tu contraseña de administrador</label>
+                        <input id="claveReintento" name="claveAdministrador" type="password" class="form-control" required autocomplete="current-password" />
+                    </div>
+                }
+                <button class="btn @(produccion ? "btn-danger" : "btn-primary")">Verificar datos y emitir @ambiente</button>
+            </form>
+        }
+        <p>HTTP: @(Model.HttpStatus?.ToString() ?? "Sin respuesta") · Código: @(Model.Codigo ?? "-")</p>
+        <p>RUC emisor: @Model.EmpresaRuc · Ambiente: @Model.Ambiente · Actualizado: @Model.Actualizado.ToString("dd/MM/yyyy HH:mm")</p>
+        @if (venta.Estado == "Anulada") {
+            <p><strong>Anulación fiscal:</strong> @(Model.EstadoAnulacion ?? "Pendiente de gestión") · @Model.MensajeAnulacion</p>
+            @if (ViewBag.FiscalHabilitado == true && User.IsInRole("Administrador") && Model.Estado == $"Aceptada {ambiente}" && Model.EstadoAnulacion == null) {
+                <form asp-action="AnularComprobante" asp-route-id="@venta.Id" method="post" class="js-swal-confirm mb-3"
+                      data-swal-title="¿Solicitar anulación fiscal?" data-swal-text="Esta acción enviará la solicitud de anulación a Factiliza @ambiente.">
+                    @if (produccion) {
+                        <div class="mb-3">
+                            <label for="claveAnulacion" class="form-label">Confirma tu contraseña de administrador</label>
+                            <input id="claveAnulacion" name="claveAdministrador" type="password" class="form-control" required autocomplete="current-password" />
+                        </div>
+                    }
+                    <button class="btn btn-outline-danger">Solicitar anulación @ambiente</button>
+                </form>
+            }
+        }
+        <div class="d-flex flex-wrap gap-2">
+            <a asp-action="ArchivoComprobante" asp-route-id="@venta.Id" asp-route-formato="pdf" class="btn btn-outline-primary">PDF @ambiente</a>
+            <a asp-action="ArchivoComprobante" asp-route-id="@venta.Id" asp-route-formato="xml" class="btn btn-outline-secondary">XML</a>
+            @if (!string.IsNullOrEmpty(Model.CdrZip)) { <a asp-action="ArchivoComprobante" asp-route-id="@venta.Id" asp-route-formato="cdr" class="btn btn-outline-secondary">CDR ZIP</a> }
+            @if (!string.IsNullOrEmpty(Model.CdrAnulacionZip)) { <a asp-action="ArchivoComprobante" asp-route-id="@venta.Id" asp-route-formato="cdr-anulacion" class="btn btn-outline-secondary">CDR anulación</a> }
+        </div>
+        <p class="text-muted mt-3 mb-0">Consultar archivos no reenvía el comprobante. Un resultado incierto debe conciliarse en el portal de Factiliza antes de cualquier otra acción.</p>
+    }
+</div></section>

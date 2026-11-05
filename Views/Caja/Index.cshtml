@@ -1,0 +1,227 @@
+@model MiniMarket.Web.Models.AperturaCaja
+
+@{
+    ViewData["Title"] = "Control de Caja";
+    string estado = ViewBag.Estado;
+    var ventasEfectivo = Model?.VentasEfectivo ?? 0;
+    var totalEsperado = Model != null ? Model.MontoInicial + ventasEfectivo - Model.TotalGastos : 0;
+}
+
+<style>
+    .cash-page { --cash-blue:#2563eb; --cash-green:#0f9f8f; --cash-red:#e5484d; --cash-ink:#1f2a44; --cash-muted:#718096; --cash-line:#e8eef7; }
+    .cash-page .cash-header { align-items:center; display:flex; justify-content:space-between; gap:1rem; margin-bottom:1.5rem; }
+    .cash-page .cash-eyebrow { color:var(--cash-blue); font-size:.78rem; font-weight:850; letter-spacing:.08em; margin-bottom:.35rem; text-transform:uppercase; }
+    .cash-page .cash-title { color:var(--cash-ink); font-size:clamp(1.8rem,3vw,2.35rem); font-weight:850; letter-spacing:-.04em; margin:0; }
+    .cash-page .cash-subtitle { color:var(--cash-muted); margin:.35rem 0 0; }
+    .cash-page .cash-status { align-items:center; background:#fff; border:1px solid var(--cash-line); border-radius:18px; box-shadow:0 12px 34px rgba(31,42,68,.055); color:var(--cash-ink); display:inline-flex; font-weight:850; gap:.55rem; padding:.75rem 1rem; }
+    .cash-page .cash-status.is-open { color:var(--cash-green); }
+    .cash-page .cash-panel { background:#fff; border:1px solid var(--cash-line); border-radius:26px; box-shadow:0 12px 32px rgba(31,42,68,.055); overflow:hidden; }
+    .cash-page .cash-panel-header { align-items:center; border-bottom:1px solid var(--cash-line); display:flex; justify-content:space-between; gap:1rem; padding:1rem 1.25rem; }
+    .cash-page .cash-panel-title { align-items:center; color:var(--cash-ink); display:flex; font-size:1rem; font-weight:850; gap:.5rem; margin:0; }
+    .cash-page .cash-panel-title i { color:var(--cash-blue); }
+    .cash-page .cash-chip { background:#f6f8fc; border:1px solid var(--cash-line); border-radius:999px; color:var(--cash-muted); font-size:.78rem; font-weight:750; padding:.35rem .7rem; }
+    .cash-page .cash-panel-body { padding:1.35rem; }
+
+    .cash-page .cash-open-card { margin-inline:auto; max-width:920px; text-align:left; }
+    .cash-page .cash-closed-layout { align-items:stretch; display:grid; gap:clamp(1.25rem,3vw,2.5rem); grid-template-columns:minmax(0,1fr) minmax(340px,.92fr); padding:clamp(1.5rem,4vw,3rem); }
+    .cash-page .cash-closed-intro { align-content:center; background:linear-gradient(145deg,#f5f8ff,#edf3ff); border:1px solid #e1eaff; border-radius:24px; display:grid; justify-items:start; min-height:330px; padding:clamp(1.5rem,3vw,2.5rem); }
+    .cash-page .cash-open-icon { align-items:center; background:#fff; border:1px solid #dce8ff; border-radius:18px; box-shadow:0 8px 22px rgba(37,99,235,.08); color:var(--cash-blue); display:inline-flex; font-size:1.35rem; height:56px; justify-content:center; margin-bottom:1.35rem; width:56px; }
+    .cash-page .cash-closed-kicker { color:var(--cash-blue); font-size:.72rem; font-weight:850; letter-spacing:.12em; margin-bottom:.45rem; text-transform:uppercase; }
+    .cash-page .cash-open-title { color:var(--cash-ink); font-size:clamp(1.5rem,2.4vw,2rem); font-weight:850; letter-spacing:-.035em; margin:0 0 .55rem; }
+    .cash-page .cash-closed-copy { color:var(--cash-muted); line-height:1.65; margin:0; max-width:34ch; }
+    .cash-page .cash-closed-hint { align-items:center; color:#50627f; display:flex; font-size:.86rem; gap:.55rem; margin-top:1.6rem; }
+    .cash-page .cash-closed-hint i { color:var(--cash-blue); }
+    .cash-page .cash-open-form-wrap { align-content:center; background:#fff; border:1px solid var(--cash-line); border-radius:24px; box-shadow:0 12px 32px rgba(31,42,68,.055); display:grid; padding:clamp(1.4rem,2.5vw,2rem); }
+    .cash-page .cash-open-form-heading { color:var(--cash-ink); font-size:1rem; font-weight:850; margin:0 0 .35rem; }
+    .cash-page .cash-open-form-copy { color:var(--cash-muted); font-size:.87rem; margin:0 0 1.25rem; }
+    .cash-page .cash-open-form { margin:0; width:100%; }
+    .cash-page .cash-input-lg { border:1px solid #dce5f2; border-radius:14px !important; font-size:1.3rem !important; font-weight:800 !important; min-height:62px; text-align:left; }
+    .cash-page .cash-input-lg:focus { border-color:var(--cash-blue); box-shadow:0 0 0 .22rem rgba(37,99,235,.12); }
+    .cash-page .cash-open-field-label { color:var(--cash-ink); font-weight:750; }
+
+    .cash-page .cash-primary { background:var(--cash-blue) !important; border-color:var(--cash-blue) !important; border-radius:16px !important; color:#fff !important; font-weight:850; min-height:52px; }
+    .cash-page .cash-danger { background:#fff0f3 !important; border:1px solid #ffd6de !important; border-radius:16px !important; color:var(--cash-red) !important; font-weight:850; min-height:52px; }
+
+    .cash-page .cash-metric-grid { display:grid; gap:.9rem; grid-template-columns:repeat(3,1fr); margin-bottom:1rem; }
+    .cash-page .cash-metric { align-items:center; background:#f8fafc; border:1px solid var(--cash-line); border-radius:20px; display:flex; flex-direction:column; justify-content:center; min-height:98px; padding:1rem; text-align:center; }
+    .cash-page .cash-metric-label { color:var(--cash-muted); font-size:.74rem; font-weight:850; letter-spacing:.06em; margin-bottom:.45rem; text-transform:uppercase; }
+    .cash-page .cash-metric-value { color:var(--cash-ink); font-size:clamp(1.35rem,2vw,1.85rem); font-weight:900; letter-spacing:-.04em; line-height:1; }
+    .cash-page .cash-metric.is-positive .cash-metric-value { color:var(--cash-green); }
+    .cash-page .cash-metric.is-negative .cash-metric-value { color:var(--cash-red); }
+
+    .cash-page .cash-open-shift { border-radius:24px; }
+    .cash-page .cash-open-shift .cash-panel-header { min-height:78px; padding:1.1rem 1.4rem; }
+    .cash-page .cash-open-shift .cash-panel-body { padding:1.4rem; }
+    .cash-page .cash-live-label { color:var(--cash-green); font-size:.68rem; font-weight:900; letter-spacing:.1em; margin-left:.2rem; text-transform:uppercase; }
+    .cash-page .cash-live-dot { background:var(--cash-green); border-radius:50%; display:inline-block; height:8px; margin-right:.35rem; vertical-align:1px; width:8px; }
+    .cash-page .cash-metric-grid { gap:1rem; grid-template-columns:repeat(3,minmax(0,1fr)); margin-bottom:1rem; }
+    .cash-page .cash-metric { align-items:flex-start; min-height:116px; padding:1.15rem 1.2rem; text-align:left; }
+    .cash-page .cash-metric-label { font-size:.7rem; letter-spacing:.055em; margin-bottom:.7rem; }
+    .cash-page .cash-metric-value { font-size:clamp(1.35rem,2vw,1.8rem); font-variant-numeric:tabular-nums; }
+
+    .cash-page .cash-expected { align-items:center; background:linear-gradient(120deg,#1d4ed8,#2563eb); border:0; border-radius:20px; color:#fff; display:grid; gap:1rem; grid-template-columns:auto 1fr auto; margin:1rem 0 1.25rem; min-height:112px; padding:1.2rem 1.35rem; }
+    .cash-page .cash-expected-icon { align-items:center; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.18); border-radius:15px; color:#fff; display:inline-flex; height:50px; justify-content:center; width:50px; }
+    .cash-page .cash-expected-label { color:#e7eeff; font-size:.72rem; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }
+    .cash-page .cash-expected-detail { color:#d8e3ff; font-size:.86rem; margin-top:.25rem; }
+    .cash-page .cash-expected-total { color:#fff; font-size:clamp(1.7rem,2.7vw,2.25rem); font-variant-numeric:tabular-nums; font-weight:900; letter-spacing:-.04em; text-align:right; white-space:nowrap; }
+
+    .cash-page .cash-close-box { background:#fbfcfe; border:1px solid var(--cash-line); border-radius:20px; padding:1.2rem; }
+    .cash-page .cash-close-heading { align-items:center; display:flex; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
+    .cash-page .cash-close-title { align-items:center; color:var(--cash-ink); display:flex; font-size:1rem; font-weight:850; gap:.55rem; margin:0; }
+    .cash-page .cash-close-title i { color:var(--cash-blue); }
+    .cash-page .cash-close-step { background:#eef4ff; border-radius:999px; color:var(--cash-blue); font-size:.68rem; font-weight:850; letter-spacing:.05em; padding:.4rem .7rem; white-space:nowrap; }
+    .cash-page .cash-close-grid { align-items:stretch; display:grid; gap:1rem; grid-template-columns:minmax(0,1fr) minmax(250px,.72fr); }
+    .cash-page .cash-count-card,
+    .cash-page .cash-submit-card { background:#fff; border:1px solid var(--cash-line); border-radius:16px; min-height:136px; padding:1rem 1.1rem; }
+    .cash-page .cash-count-card { display:flex; flex-direction:column; justify-content:center; }
+    .cash-page .cash-submit-card { align-items:stretch; display:flex; flex-direction:column; justify-content:center; text-align:center; }
+    .cash-page .cash-form-label { color:var(--cash-ink); font-weight:850; margin-bottom:.55rem; }
+    .cash-page .cash-help { color:var(--cash-muted); font-size:.82rem; margin-top:.45rem; }
+    .cash-page .cash-submit-hint { color:var(--cash-muted); font-size:.78rem; font-weight:750; margin-bottom:.65rem; }
+    .cash-page .cash-close-input { border:1px solid #dce5f2; border-radius:12px; font-size:1.15rem; font-variant-numeric:tabular-nums; font-weight:800; min-height:50px; }
+    .cash-page .cash-close-input:focus { border-color:var(--cash-blue); box-shadow:0 0 0 .2rem rgba(37,99,235,.12); }
+
+    .cash-page .cash-actions { display:grid; gap:.9rem; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); margin-top:1rem; }
+    .cash-page .cash-action { align-items:center; background:#fff; border:1px solid var(--cash-line); border-radius:15px; color:var(--cash-ink); display:flex; font-weight:800; gap:.65rem; justify-content:center; min-height:58px; padding:.8rem 1rem; text-decoration:none; transition:border-color .15s ease,transform .15s ease,box-shadow .15s ease; }
+    .cash-page .cash-action:hover { border-color:#c8d8f5; box-shadow:0 8px 20px rgba(31,42,68,.07); transform:translateY(-1px); }
+    .cash-page .cash-action i { color:var(--cash-blue); }
+    .cash-page .cash-action.is-danger i { color:var(--cash-red); }
+
+    body.contraste-oscuro .cash-page { --cash-blue:#fcd34d; --cash-green:#fcd34d; --cash-red:#fcd34d; --cash-ink:#fcd34d; --cash-muted:#fde68a; --cash-line:#78350f; }
+    body.contraste-oscuro .cash-page .cash-status,
+    body.contraste-oscuro .cash-page .cash-panel,
+    body.contraste-oscuro .cash-page .cash-metric,
+    body.contraste-oscuro .cash-page .cash-expected,
+    body.contraste-oscuro .cash-page .cash-expected-icon,
+    body.contraste-oscuro .cash-page .cash-close-box,
+    body.contraste-oscuro .cash-page .cash-count-card,
+    body.contraste-oscuro .cash-page .cash-submit-card,
+    body.contraste-oscuro .cash-page .cash-action,
+    body.contraste-oscuro .cash-page .cash-open-icon { background:#12100e !important; border-color:#78350f !important; color:#fcd34d !important; box-shadow:none !important; }
+    body.contraste-suave .cash-page { --cash-blue:#555; --cash-green:#555; --cash-red:#555; --cash-ink:#222; --cash-muted:#555; --cash-line:#b8b8b8; }
+    @@media (max-width:991.98px) { .cash-page .cash-metric-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } .cash-page .cash-close-grid { grid-template-columns:minmax(0,1.2fr) minmax(220px,.8fr); } }
+    @@media (max-width:767.98px) { .cash-page .cash-header { align-items:flex-start; } .cash-page .cash-expected { align-items:flex-start; grid-template-columns:auto 1fr; } .cash-page .cash-expected-total { grid-column:2; text-align:left; } .cash-page .cash-closed-layout { grid-template-columns:1fr; padding:1rem; } .cash-page .cash-closed-intro { min-height:0; padding:1.5rem; } .cash-page .cash-open-form-wrap { padding:1.35rem; } .cash-page .cash-metric-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:.6rem; } .cash-page .cash-metric { min-height:100px; padding:.85rem; } .cash-page .cash-close-grid { grid-template-columns:1fr; } .cash-page .cash-submit-card { min-height:110px; } }
+    @@media (max-width:520px) { .cash-page .cash-metric-grid,.cash-page .cash-actions { grid-template-columns:1fr; } .cash-page .cash-metric { min-height:80px; } .cash-page .cash-close-heading { align-items:flex-start; flex-direction:column; } }
+</style>
+
+<div class="cash-page">
+    @if (TempData["MensajeError"] is string mensajeError)
+    {
+        <div class="alert alert-warning" role="alert">@mensajeError</div>
+    }
+
+    <div class="cash-header">
+        <div>
+            <div class="cash-eyebrow">Caja / Turno</div>
+            <h2 class="cash-title">Control de Turno</h2>
+            <p class="cash-subtitle">Gestiona apertura, ventas, gastos y cierre de caja.</p>
+        </div>
+        <div class="cash-status @(estado == "Cerrado" ? "" : "is-open")">
+            <i class="fas @(estado == "Cerrado" ? "fa-lock" : "fa-lock-open")"></i>
+            <span>@(estado == "Cerrado" ? "Caja cerrada" : "Turno abierto")</span>
+        </div>
+    </div>
+
+    @if (estado == "Cerrado")
+    {
+        <section class="cash-panel cash-open-card">
+            <div class="cash-closed-layout">
+                <div class="cash-closed-intro">
+                    <span class="cash-open-icon"><i class="fas fa-cash-register"></i></span>
+                    <div class="cash-closed-kicker">Inicio de jornada</div>
+                    <h3 class="cash-open-title">Hola, @User.Identity?.Name</h3>
+                    <p class="cash-closed-copy">La caja está cerrada. Registra el efectivo inicial para habilitar el turno y comenzar a operar.</p>
+                    <div class="cash-closed-hint"><i class="fas fa-circle-info"></i><span>Ingresa el fondo disponible para dar cambio.</span></div>
+                </div>
+
+                <div class="cash-open-form-wrap">
+                    <h4 class="cash-open-form-heading">Fondo inicial</h4>
+                    <p class="cash-open-form-copy">Confirma el monto físico con el que empieza la caja.</p>
+                    <form asp-action="Abrir" method="post" class="cash-open-form">
+                        <div class="form-floating mb-3">
+                            <input type="number" name="montoInicial" class="form-control cash-input-lg" id="montoInput" placeholder="0.00" step="0.10" min="0" required />
+                            <label class="cash-open-field-label" for="montoInput">Monto inicial (S/.)</label>
+                        </div>
+                        <button type="submit" class="btn cash-primary w-100">
+                            <i class="fas fa-lock-open me-2"></i>Abrir caja
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </section>
+    }
+    else
+    {
+        <section class="cash-panel cash-open-shift">
+            <div class="cash-panel-header">
+                <h3 class="cash-panel-title"><i class="fas fa-circle-check"></i>Turno abierto</h3>
+                <span class="cash-chip"><i class="far fa-clock me-1"></i>Apertura: @Model.FechaApertura.ToString("HH:mm")</span>
+            </div>
+            <div class="cash-panel-body">
+                <div class="cash-metric-grid">
+                    <div class="cash-metric">
+                        <div class="cash-metric-label">Dinero inicial</div>
+                        <div class="cash-metric-value">S/. @Model.MontoInicial.ToString("N2")</div>
+                    </div>
+                    <div class="cash-metric is-positive">
+                        <div class="cash-metric-label">Ventas del turno</div>
+                        <div class="cash-metric-value">+ S/. @Model.TotalVentas.ToString("N2")</div>
+                    </div>
+                    <div class="cash-metric is-negative">
+                        <div class="cash-metric-label">Gastos / retiros</div>
+                        <div class="cash-metric-value">- S/. @Model.TotalGastos.ToString("N2")</div>
+                    </div>
+                </div>
+
+                <div class="cash-expected">
+                    <span class="cash-expected-icon"><i class="fas fa-scale-balanced"></i></span>
+                    <div>
+                        <div class="cash-expected-label">Total esperado en caja</div>
+                        <div class="cash-expected-detail">Ventas en efectivo: S/. @ventasEfectivo.ToString("N2")</div>
+                    </div>
+                    <div class="cash-expected-total">S/. @totalEsperado.ToString("N2")</div>
+                </div>
+
+                <div class="cash-close-box">
+                    <div class="cash-close-heading">
+                        <h5 class="cash-close-title"><i class="fas fa-lock"></i>Cerrar turno y contar efectivo</h5>
+                        <span class="cash-close-step">ARQUEO FINAL</span>
+                    </div>
+                    <form asp-action="Cerrar" method="post" class="js-swal-confirm" data-swal-caja-cierre="true" data-swal-title="¿Cerrar caja?" data-swal-confirm="Sí, cerrar" data-swal-confirm-color="#e5484d" data-swal-cancel-color="#6b7280" data-swal-icon-color="#e5484d" data-expected-cash="@totalEsperado.ToString("N2")">
+                        <div class="cash-close-grid">
+                            <div class="cash-count-card">
+                                <label class="cash-form-label" for="montoCierre">Dinero contado en efectivo</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">S/.</span>
+                                    <input type="number" id="montoCierre" name="montoCierre" class="form-control fw-bold cash-close-input" step="0.10" min="0" required placeholder="0.00" />
+                                </div>
+                                <div class="cash-help">Cuenta billetes y monedas e ingresa el total físico.</div>
+                            </div>
+                            <div class="cash-submit-card">
+                                <div class="cash-submit-hint">Revisa el monto antes de cerrar</div>
+                                <button type="submit" class="btn cash-danger w-100">
+                                    <i class="fas fa-lock me-2"></i>Cerrar caja
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <div class="cash-actions">
+            <a asp-controller="Ventas" asp-action="Create" class="cash-action">
+                <i class="fas fa-shopping-cart"></i>Ir a vender
+            </a>
+            <a asp-controller="Gastos" asp-action="Create" class="cash-action is-danger">
+                <i class="fas fa-hand-holding-usd"></i>Registrar gasto
+            </a>
+            @if (User.IsInRole("Administrador") || User.IsInRole("Cajero"))
+            {
+                <a asp-action="Historial" class="cash-action">
+                    <i class="fas fa-history"></i>Historial de caja
+                </a>
+            }
+        </div>
+    }
+</div>

@@ -1,0 +1,44 @@
+@{
+    ViewData["Title"] = "Seguridad";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="text-primary"><i class="fas fa-shield-alt me-2"></i>Seguridad</h2>
+        <p class="text-muted">Administra el reinicio de los datos de tu negocio.</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- RESETEO DE FÁBRICA -->
+    <div class="col-md-12">
+        <div class="card bg-danger bg-opacity-10 border-danger border-opacity-25 shadow-sm mt-2">
+            <div class="card-body p-4 d-flex align-items-center justify-content-between flex-wrap">
+                <div class="mb-3 mb-md-0">
+                    <h5 class="fw-bold text-danger"><i class="fas fa-skull-crossbones me-2"></i>Reseteo de Fábrica (Borrado Total)</h5>
+                    <p class="mb-0 text-dark opacity-75">Esta acción eliminará absolutamente todas tus <strong>Ventas, Compras, Inventario, Productos, Clientes y Categorías</strong>. Únicamente sobrevivirá tu configuración de logotipos, moneda de tu empresa y el inicio de sesión.</p>
+                </div>
+                <form asp-action="FactoryReset" method="post" class="js-swal-confirm" data-swal-title="¡Última advertencia!" data-swal-text="¿Estás completamente seguro de borrar tu sistema desde cero? Se perderán años de datos." data-swal-confirm="Sí, borrar todo">
+                    <button type="submit" class="btn btn-danger btn-lg shadow">
+                        <i class="fas fa-trash-alt me-2"></i> INICIAR RESETEO
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @if (TempData["Mensaje"] != null)
+    {
+        <script>
+            Swal.fire({ icon: 'success', title: 'Operación completada', text: @Json.Serialize(TempData["Mensaje"]), confirmButtonText: 'Aceptar' });
+        </script>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <script>
+            Swal.fire({ icon: 'error', title: 'No se pudo completar', text: @Json.Serialize(TempData["Error"]), confirmButtonText: 'Aceptar' });
+        </script>
+    }
+}

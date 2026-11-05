@@ -1,0 +1,37 @@
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
+
+@if (SignInManager.IsSignedIn(User))
+{
+    <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle text-dark fw-bold" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-user-circle me-2 text-primary"></i> @User.Identity?.Name
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="navbarDropdown">
+            <li><h6 class="dropdown-header">Cuenta</h6></li>
+            <li>
+                <span class="dropdown-item-text text-muted small">
+                    <i class="fas fa-id-badge me-1"></i>
+                    @(User.IsInRole("Admin") ? "Administrador" : "Cajero")
+                </span>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <form class="form-inline" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
+                    <button type="submit" class="dropdown-item text-danger fw-bold">
+                        <i class="fas fa-sign-out-alt me-2"></i> Cerrar Sesión
+                    </button>
+                </form>
+            </li>
+        </ul>
+    </li>
+}
+else
+{
+    <li class="nav-item">
+        <a class="nav-link btn btn-primary text-white px-4 ms-2 shadow-sm rounded-pill" asp-area="Identity" asp-page="/Account/Login">
+            <i class="fas fa-sign-in-alt me-2"></i> Iniciar Sesión
+        </a>
+    </li>
+}

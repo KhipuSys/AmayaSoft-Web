@@ -1,0 +1,177 @@
+@model IEnumerable<MiniMarket.Web.Models.Venta>
+
+@{
+    ViewData["Title"] = "Historial de Ventas";
+}
+
+<div class="amaya-page-heading">
+    <div>
+        <h2><i class="fas fa-shopping-cart amaya-title-icon"></i>Historial de Ventas</h2>
+        <p class="text-muted">Consulta y gestiona las ventas realizadas en el sistema.</p>
+    </div>
+    <a asp-action="Create" class="btn amaya-primary-action btn-lg shadow-sm">
+        <i class="fas fa-cash-register me-2"></i> NUEVA VENTA
+    </a>
+</div>
+
+<div class="alert alert-info small">El comprobante se emite manualmente después de registrar la venta. Solo el administrador puede autorizar el envío a Factiliza. Pulsa el estado para revisar el detalle; los resultados inciertos no deben reenviarse sin verificar.</div>
+<div class="card shadow border-0">
+    <div class="card-header amaya-card-header">
+        <h5 class="mb-0"><i class="fas fa-receipt me-2"></i>Listado de ventas</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle" id="tablaVentas">
+                <thead class="bg-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Fecha</th>
+                        <th>Cliente</th>
+                        <th>Vendedor</th>
+                        <th>Método Pago</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-center">Estado</th>
+                        <th>Comprobante / Auditoría</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr class="@(item.Estado == "Anulada" ? "table-danger opacity-75" : "")">
+                            <td class="fw-bold">@item.Id.ToString("D5")</td>
+                            <td>@item.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>
+                                @if (item.Cliente != null)
+                                {
+                                    <span class="badge bg-info text-dark">@item.Cliente.Nombre</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Público General</span>
+                                }
+                            </td>
+                            <td>
+                                <small class="text-muted">@(item.Usuario != null ? item.Usuario.UserName : "Sistema")</small>
+                            </td>
+                            <td>
+                                @{
+                                    var metodoPago = item.MetodoPago ?? "Efectivo";
+                                    var iconoPago = "fa-money-bill-wave";
+                                    var colorPago = "success";
+                                    
+                                    if(metodoPago == "Tarjeta") { iconoPago = "fa-credit-card"; colorPago = "primary"; }
+                                    else if(metodoPago == "Yape") { iconoPago = "fa-mobile-alt"; colorPago = "info"; }
+                                    else if(metodoPago == "Plin") { iconoPago = "fa-mobile-alt"; colorPago = "warning text-dark"; }
+                                    else if(metodoPago == "QR") { iconoPago = "fa-qrcode"; colorPago = "dark"; }
+                                }
+                                <span class="badge bg-@colorPago">
+                                    <i class="fas @iconoPago me-1"></i> @metodoPago
+                                </span>
+                            </td>
+                            <td class="text-end fw-bold @(item.Estado == "Anulada" ? "text-danger text-decoration-line-through" : "text-success")">
+                                S/. @item.Total.ToString("N2")
+                            </td>
+                            <td class="text-center">
+                                @if (item.Estado == "Anulada")
+                                {
+                                    <span class="badge bg-danger"><i class="fas fa-ban me-1"></i>Anulada</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success"><i class="fas fa-check me-1"></i>Activa</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <a asp-action="Comprobante" asp-route-id="@item.Id">@item.EstadoEmision</a>
+                                @if (item.FechaAnulacion.HasValue)
+                                {
+                                    <div class="small">@item.FechaAnulacion.Value.ToString("dd/MM/yyyy HH:mm") · @item.AnuladaPor<br />@item.MotivoAnulacion</div>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <a asp-action="Ticket" asp-route-id="@item.Id" class="btn btn-sm btn-outline-secondary" title="Ver Ticket" target="_blank">
+                                    <i class="fas fa-print"></i>
+                                </a>
+                                @if (User.IsInRole("Administrador") && item.Estado == "Activa")
+                                {
+                                    <button class="btn btn-sm btn-outline-danger ms-1 btn-anular"
+                                            data-id="@item.Id"
+                                            data-total="@item.Total.ToString("N2")"
+                                            title="Anular Venta">
+                                        <i class="fas fa-ban"></i>
+                                    </button>
+                                    <form id="formAnular_@item.Id" asp-action="Anular" asp-route-id="@item.Id" method="post" style="display:none;">
+                                        @Html.AntiForgeryToken()
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            if ($.fn.DataTable.isDataTable('#tablaVentas')) {
+                $('#tablaVentas').DataTable().destroy();
+            }
+
+            $('#tablaVentas').DataTable({
+                dom: '<"row"<"col-sm-12 col-md-4"B><"col-sm-12 col-md-4"l><"col-sm-12 col-md-4"f>>rtip',
+                buttons: [
+                    { extend: 'excelHtml5', text: '<i class="fas fa-file-excel"></i> Excel', className: 'btn btn-success btn-sm' },
+                    { extend: 'pdfHtml5', text: '<i class="fas fa-file-pdf"></i> PDF', className: 'btn btn-danger btn-sm', orientation: 'landscape', pageSize: 'LEGAL' },
+                    { extend: 'print', text: '<i class="fas fa-print"></i> Imprimir', className: 'btn btn-info btn-sm text-white' }
+                ],
+                "order": [[ 0, "desc" ]],
+                language: { url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json' }
+            });
+
+            // Anular Venta
+            $(document).on('click', '.btn-anular', function() {
+                var id = $(this).data('id');
+                var total = $(this).data('total');
+
+                Swal.fire({
+                    title: '¿Anular Venta #' + String(id).padStart(5, '0') + '?',
+                    html: `<p>Total: <strong>S/. ${total}</strong></p><p class="text-danger small">Esta acción <strong>revertirá el stock</strong> de todos los productos vendidos.</p>`,
+                    icon: 'warning',
+                    input: 'text',
+                    inputPlaceholder: 'Motivo de anulación',
+                    inputAttributes: { maxlength: '300' },
+                    inputValidator: value => !value || !value.trim() ? 'Indica el motivo.' : undefined,
+                    showCancelButton: true,
+                    confirmButtonText: '<i class="fas fa-ban me-1"></i>Sí, Anular',
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonText: 'No, cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: '@Url.Action("Anular", "Ventas")',
+                            type: 'POST',
+                            data: {
+                                id: id,
+                                motivo: result.value,
+                                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val()
+                            },
+                            success: function(resp) {
+                                if (resp.exito) {
+                                    Swal.fire('¡Anulada!', resp.mensaje, 'success')
+                                        .then(() => location.reload());
+                                } else {
+                                    Swal.fire('Error', resp.mensaje, 'error');
+                                }
+                            },
+                            error: function() { Swal.fire('Error', 'Error de conexión', 'error'); }
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+}

@@ -1,0 +1,158 @@
+@page
+@model MiniMarket.Web.Areas.Identity.Pages.Account.Manage.TwoFactorAuthModel
+
+@{
+    ViewData["Title"] = "Verificación en dos pasos";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Verificación en dos pasos - AmayaSoft</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        body { background: #f8fafc; }
+        .card { border: 1px solid rgba(0,0,0,.06); border-radius: 14px; box-shadow: 0 10px 25px rgba(15,23,42,.06); }
+    </style>
+</head>
+<body>
+<div class="container py-4">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-primary mb-1">Verificación en dos pasos</h1>
+            <p class="text-muted mb-0">Vincula tu cuenta con Authy para proteger el ingreso al sistema.</p>
+        </div>
+        <a asp-area="" asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary">Volver</a>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.StatusMessage))
+    {
+        <div class="alert alert-success">@Model.StatusMessage</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger fw-semibold">@Model.ErrorMessage</div>
+    }
+
+    @if (Model.Is2faEnabled)
+    {
+        <div class="card border-success mb-4">
+            <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+                <div>
+                    <h2 class="h5 text-success mb-1">2FA está activo</h2>
+                    <p class="mb-0 text-muted">En el próximo ingreso, AmayaSoft pedirá el código actual de Authy.</p>
+                </div>
+                <form method="post" asp-page-handler="Disable" id="frmDisable2fa" class="d-flex flex-column flex-md-row gap-2">
+                    <input asp-for="DisableInput.Code" class="form-control" autocomplete="one-time-code" inputmode="numeric" maxlength="7" placeholder="Código Authy" />
+                    <button type="submit" class="btn btn-outline-danger text-nowrap">Desactivar 2FA</button>
+                </form>
+            </div>
+            <span asp-validation-for="DisableInput.Code" class="text-danger small px-3 pb-3"></span>
+        </div>
+    }
+
+    @if (Model.RecoveryCodes?.Length > 0)
+    {
+        <div class="alert alert-warning mt-4">
+            <strong>Guarda estos códigos de recuperación:</strong>
+            <p class="mb-2">Se muestran una sola vez. Úsalos si pierdes acceso a Authy.</p>
+            <div class="row mt-2 font-monospace small">
+                @foreach (var code in Model.RecoveryCodes)
+                {
+                    <div class="col-6 col-md-3">@code</div>
+                }
+            </div>
+        </div>
+    }
+
+    @if (!Model.Is2faEnabled)
+    {
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h5 fw-bold mb-3">Configurar Authy</h2>
+                    <ol class="mb-4">
+                        <li>Abre Authy en tu celular.</li>
+                        <li>Elige agregar una cuenta nueva.</li>
+                        <li>Escanea el QR o elige ingreso manual de clave.</li>
+                        <li>Escribe el código de 6 dígitos que muestra Authy.</li>
+                    </ol>
+
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-auto">
+                            <div class="p-3 bg-white border rounded text-center">
+                                <img src="@Model.QrCodeDataUri" alt="Código QR para Authy" width="180" height="180" />
+                            </div>
+                        </div>
+                        <div class="col">
+                            <label class="form-label fw-semibold">Clave manual</label>
+                            <div class="input-group">
+                                <input id="sharedKey" value="@Model.SharedKey" class="form-control font-monospace" readonly />
+                                <button type="button" class="btn btn-outline-primary" onclick="copiarClave()">Copiar</button>
+                            </div>
+                            <div class="form-text">En Authy usa la opción de ingresar clave manualmente.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h2 class="h5 fw-bold mb-3">Confirmar código</h2>
+                    <form method="post" asp-page-handler="Enable">
+                        <div asp-validation-summary="All" class="text-danger small mb-3"></div>
+                        <div class="mb-3">
+                            <label asp-for="Input.Code" class="form-label fw-semibold">Código de Authy</label>
+                            <input asp-for="Input.Code" class="form-control form-control-lg text-center" autocomplete="one-time-code" inputmode="numeric" maxlength="7" />
+                            <span asp-validation-for="Input.Code" class="text-danger small"></span>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Activar verificación</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+</div>
+
+<script>
+    function copiarClave() {
+        const input = document.getElementById('sharedKey');
+        if (!input) return;
+        input.select();
+        input.setSelectionRange(0, 99999);
+        navigator.clipboard.writeText(input.value);
+    }
+</script>
+@if (Model.Is2faEnabled)
+{
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.getElementById('frmDisable2fa')?.addEventListener('submit', function (event) {
+            if (this.dataset.swalConfirmed === 'true') return;
+            event.preventDefault();
+            Swal.fire({
+                title: '¿Desactivar 2FA?',
+                text: 'La cuenta dejará de pedir código Authy al iniciar sesión.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, desactivar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#dc3545'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    this.dataset.swalConfirmed = 'true';
+                    this.submit();
+                }
+            });
+        });
+    </script>
+}
+</body>
+</html>

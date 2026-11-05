@@ -1,0 +1,585 @@
+@model MiniMarket.Web.Models.Venta
+
+@{
+    ViewData["Title"] = "Punto de Venta";
+}
+
+@Html.AntiForgeryToken()
+<style>
+    .pos-page { --pos-blue: #2563eb; --pos-green: #0f9f8f; --pos-red: #e5484d; --pos-ink: #1f2a44; --pos-muted: #718096; --pos-line: #e8eef7; }
+    .pos-page .pos-header { align-items: center; display: flex; justify-content: space-between; gap: 1.25rem; margin-bottom: 1.25rem; }
+    .pos-page .pos-eyebrow { color: var(--pos-blue); font-size: .78rem; font-weight: 850; letter-spacing: .08em; margin-bottom: .35rem; text-transform: uppercase; }
+    .pos-page .pos-title { color: var(--pos-ink); font-size: clamp(1.8rem, 3vw, 2.35rem); font-weight: 850; letter-spacing: -.04em; margin: 0; }
+    .pos-page .pos-subtitle { color: var(--pos-muted); margin: .35rem 0 0; }
+    .pos-page .pos-status { align-items: center; background: #fff; border: 1px solid var(--pos-line); border-radius: 18px; color: var(--pos-ink); display: inline-flex; font-weight: 800; gap: .55rem; padding: .75rem 1rem; box-shadow: 0 12px 34px rgba(31,42,68,.055); }
+    .pos-page .pos-grid { align-items: stretch; display: grid; gap: 1rem; grid-template-columns: minmax(350px,.86fr) minmax(0,1.14fr); }
+    .pos-page .pos-panel { background: #fff; border: 1px solid var(--pos-line); border-radius: 22px; box-shadow: 0 12px 32px rgba(31,42,68,.055); min-width:0; overflow: hidden; }
+    .pos-page .pos-panel-header { align-items: center; border-bottom: 1px solid var(--pos-line); display: flex; justify-content: space-between; gap: 1rem; min-height:68px; padding: .9rem 1.15rem; }
+    .pos-page .pos-panel-title { color: var(--pos-ink); font-size: 1rem; font-weight: 850; margin: 0; }
+    .pos-page .pos-panel-title i { color: var(--pos-blue); margin-right: .5rem; }
+    .pos-page .pos-panel-body { padding: 1.1rem; }
+    .pos-page .pos-label { color: var(--pos-muted); font-size: .76rem; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
+    .pos-page .pos-field-card { background: #f8fafc; border: 1px solid var(--pos-line); border-radius: 18px; padding: .9rem; }
+    .pos-page .pos-scan-intro { align-items: center; background: #f3f7ff; border: 1px solid #e1eaff; border-radius: 16px; display: grid; gap: .85rem; grid-template-columns: auto 1fr; margin-bottom: .85rem; padding: .85rem 1rem; }
+    .pos-page .pos-scan-icon { align-items: center; background: #fff; border-radius: 16px; color: var(--pos-blue); display: inline-flex; height: 48px; justify-content: center; width: 48px; }
+    .pos-page .pos-scan-title { color: var(--pos-ink); font-weight: 850; margin-bottom: .15rem; }
+    .pos-page .pos-scan-help { color: var(--pos-muted); font-size: .86rem; margin: 0; }
+    .pos-page .pos-search-box { background: #fff; border: 1px solid var(--pos-line); border-radius: 15px; padding: .85rem; }
+    .pos-page .pos-search-box .input-group-text { background: #f8fafc !important; }
+    .pos-page .pos-info-grid { display: grid; gap: .7rem; grid-template-columns: repeat(2,minmax(0,1fr)); margin: .85rem 0; }
+    .pos-page .pos-info-card { align-items: center; background: #fbfcfe; border: 1px solid var(--pos-line); border-radius: 15px; display: flex; flex-direction: row; gap: .65rem; justify-content: flex-start; min-height: 78px; min-width:0; padding: .7rem .8rem; text-align:left; }
+    .pos-page .pos-info-icon { align-items: center; background: #eef4ff; border-radius: 10px; color: var(--pos-blue); display: inline-flex; flex:0 0 34px; height: 34px; justify-content: center; margin:0; width: 34px; }
+    .pos-page .pos-stat-label { color: var(--pos-muted); font-size: .67rem; font-weight: 850; letter-spacing: .055em; line-height: 1; margin-bottom: .4rem; text-transform: uppercase; }
+    .pos-page .pos-stat-value { align-items: baseline; display: flex; gap: .25rem; justify-content: flex-start; min-width: 0; }
+    .pos-page .pos-stat-prefix,
+    .pos-page .pos-stat-suffix { color: var(--pos-muted); font-size: .82rem; font-weight: 850; }
+    .pos-page .pos-info-card input { background: transparent !important; border: 0 !important; box-shadow: none !important; color: var(--pos-ink) !important; font-size: 1.45rem; font-weight: 900 !important; height: auto; line-height: 1; min-width: 0; padding: 0; text-align: center; }
+    .pos-page .pos-info-card input#txtPrecio { max-width: 100px; }
+    .pos-page .pos-info-card input#txtStock { max-width: 56px; text-align: center !important; }
+    .pos-page .pos-qty-row { align-items: end; display: grid; gap: .7rem; grid-template-columns:minmax(140px,.72fr) minmax(0,1.28fr); margin-bottom: 0; }
+    .pos-page .pos-qty-card { background:transparent; border:0; border-radius:0; display:flex; flex-direction:column; justify-content:flex-end; min-height:0; padding:0; }
+    .pos-page .pos-qty-card .pos-label { margin-bottom:.4rem; text-align:left; }
+    .pos-page .pos-qty { height:54px; min-height:54px; border:1px solid var(--pos-line); border-radius:12px; box-shadow:none; }
+    .pos-page .pos-qty:focus { border-color:var(--pos-blue); box-shadow:0 0 0 .2rem rgba(37,99,235,.11); }
+    .pos-page .pos-add-btn { align-items:center; align-self:stretch; display:inline-flex; justify-content:center; min-height:54px; }
+    .pos-page .pos-add-btn, .pos-page .pos-process-btn { background: var(--pos-blue) !important; border-color: var(--pos-blue) !important; border-radius: 13px !important; color: #fff !important; font-weight: 850; min-height: 50px; }
+    .pos-page .pos-add-btn { box-shadow:0 5px 13px rgba(37,99,235,.14); font-size:.96rem; }
+    .pos-page .pos-total-card { align-items:center; background:linear-gradient(120deg,#1d4ed8,#2563eb); border:0; border-radius:17px; color:#fff; display:flex; gap:1rem; justify-content:space-between; margin:0 0 .85rem; padding:.9rem 1rem; }
+    .pos-page .pos-total-label { color:#e1eaff; font-size:.72rem; font-weight:850; letter-spacing:.06em; text-transform:uppercase; }
+    .pos-page .pos-total-value { color:#fff; font-size:clamp(1.55rem,2.2vw,2rem); font-variant-numeric:tabular-nums; font-weight:900; letter-spacing:-.045em; line-height:1; margin:0; white-space:nowrap; }
+    .pos-page .pos-cart-body { display: flex; flex-direction: column; min-height: 680px; }
+    .pos-page .pos-cart-table { flex:1 1 auto; height: 330px; max-height: 390px; min-height:260px; overflow-y: auto; position: relative; scrollbar-gutter: stable; }
+    .pos-page .pos-cart-table::-webkit-scrollbar { width: 10px; }
+    .pos-page .pos-cart-table::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 999px; }
+    .pos-page .pos-cart-table::-webkit-scrollbar-thumb { background: #c8d4e8; border: 2px solid #f1f5f9; border-radius: 999px; }
+    .pos-page .pos-cart-table::-webkit-scrollbar-thumb:hover { background: #9fb0cf; }
+    .pos-page .pos-empty { align-items: center; color: var(--pos-muted); display: flex; flex-direction: column; height: 300px; justify-content: center; padding: 1rem; text-align: center; }
+    .pos-page .pos-empty i { color: #c8d4e8; font-size: 3.6rem; margin-bottom: 1rem; }
+    .pos-page .pos-checkout { background:#f8fafc; border-top:1px solid var(--pos-line); margin-top:auto; padding:1rem; }
+    .pos-page .pos-payment-options { display:grid; gap:.5rem; grid-template-columns:repeat(5,minmax(0,1fr)); }
+    .pos-page .pos-payment-options .form-check { background:#fff; border:1px solid var(--pos-line); border-radius:11px; margin:0; min-height:44px; padding:.65rem .45rem .65rem 1.8rem; }
+    .pos-page .pos-payment-options .form-check-label { font-size:.82rem; white-space:nowrap; }
+    .pos-page .pos-cash-grid { background:#fff; border:1px solid var(--pos-line); border-radius:14px; margin:.75rem 0; padding:.75rem; }
+    .pos-page .pos-discount { margin-bottom:.75rem; }
+    .pos-page .pos-process-btn { min-height:54px; box-shadow:0 7px 18px rgba(37,99,235,.17); }
+    .pos-page .pos-chip { background: #f6f8fc; border: 1px solid var(--pos-line); border-radius: 999px; color: var(--pos-muted); font-size: .78rem; font-weight: 750; padding: .35rem .7rem; }
+    body.contraste-oscuro .pos-page { --pos-blue: #fcd34d; --pos-green: #fcd34d; --pos-red: #fcd34d; --pos-ink: #fcd34d; --pos-muted: #fde68a; --pos-line: #78350f; }
+    body.contraste-oscuro .pos-page .pos-status,
+    body.contraste-oscuro .pos-page .pos-panel,
+    body.contraste-oscuro .pos-page .pos-scan-intro,
+    body.contraste-oscuro .pos-page .pos-scan-icon,
+    body.contraste-oscuro .pos-page .pos-search-box,
+    body.contraste-oscuro .pos-page .pos-field-card,
+    body.contraste-oscuro .pos-page .pos-info-icon,
+    body.contraste-oscuro .pos-page .pos-qty-card,
+    body.contraste-oscuro .pos-page .pos-info-card,
+    body.contraste-oscuro .pos-page .pos-total-card,
+    body.contraste-oscuro .pos-page .pos-checkout,
+    body.contraste-oscuro .pos-page .pos-payment-options .form-check,
+    body.contraste-oscuro .pos-page .pos-cash-grid { background: #12100e !important; border-color: #78350f !important; color: #fcd34d !important; box-shadow: none !important; }
+    body.contraste-suave .pos-page { --pos-blue: #555; --pos-green: #555; --pos-red: #555; --pos-ink: #222; --pos-muted: #555; --pos-line: #b8b8b8; }
+    @@media (max-width: 1199.98px) { .pos-page .pos-grid { grid-template-columns:minmax(300px,.85fr) minmax(0,1.15fr); gap:.75rem; } .pos-page .pos-panel-body { padding:.9rem; } .pos-page .pos-cart-body { min-height:660px; } }
+    @@media (max-width: 991.98px) { .pos-page .pos-grid { grid-template-columns:1fr; }.pos-page .pos-cart-body { min-height:auto; }.pos-page .pos-cart-table { flex:0 0 auto; height:320px; max-height:320px; } }
+    @@media (max-width: 767.98px) { .pos-page .pos-header { align-items:flex-start; flex-direction:column; }.pos-page .pos-payment-options { grid-template-columns:repeat(3,minmax(0,1fr)); }.pos-page .pos-qty-row { grid-template-columns:minmax(110px,.75fr) minmax(0,1.25fr); } }
+    @@media (max-width: 480px) { .pos-page .pos-payment-options { grid-template-columns:repeat(2,minmax(0,1fr)); }.pos-page .pos-qty-row { grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); }.pos-page .pos-add-btn { min-height:54px; padding:.5rem; }.pos-page .pos-add-btn i { margin-right:.35rem !important; }.pos-page .pos-info-card { padding:.65rem; }.pos-page .pos-info-card input#txtPrecio { max-width:82px; }.pos-page .pos-header { gap:.75rem; } }
+</style>
+
+<div class="pos-page">
+    <div id="avisoOperacion" class="alert alert-warning d-none" role="status">Hay una venta pendiente de confirmar. Pulsa «Procesar venta» para recuperar su resultado antes de iniciar otra venta.</div>
+
+    <div class="pos-header">
+        <div>
+            <div class="pos-eyebrow">Punto de venta</div>
+            <h2 class="pos-title">Nueva venta</h2>
+            <p class="pos-subtitle">Busca productos, arma el carrito y procesa el cobro.</p>
+        </div>
+        <div class="pos-status"><i class="fas fa-cash-register"></i><span>Venta en curso</span></div>
+    </div>
+
+    <div class="pos-grid">
+        <section class="pos-panel">
+            <div class="pos-panel-header">
+                <h3 class="pos-panel-title"><i class="fas fa-barcode"></i>Scanner / buscador</h3>
+                <span class="pos-chip">Producto</span>
+            </div>
+            <div class="pos-panel-body">
+                <div class="pos-scan-intro">
+                    <span class="pos-scan-icon"><i class="fas fa-barcode"></i></span>
+                    <div>
+                        <div class="pos-scan-title">Escanea o busca un producto</div>
+                        <p class="pos-scan-help">Selecciona un producto activo para cargar precio, stock y cantidad.</p>
+                    </div>
+                </div>
+
+                <div class="pos-search-box">
+                    <label class="form-label pos-label">Buscar producto</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <select id="cboProducto" class="form-select" style="width: 85%;"></select>
+                    </div>
+                    <small class="text-muted d-block mt-2">Puedes escribir nombre, SKU o código de barras.</small>
+                </div>
+
+                <div class="pos-info-grid">
+                    <div class="pos-info-card">
+                        <span class="pos-info-icon"><i class="fas fa-tag"></i></span>
+                        <div>
+                            <div class="pos-stat-label">Precio unit.</div>
+                            <div class="pos-stat-value">
+                                <span class="pos-stat-prefix">S/.</span>
+                                <input type="text" class="form-control fw-bold" id="txtPrecio" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pos-info-card">
+                        <span class="pos-info-icon"><i class="fas fa-boxes-stacked"></i></span>
+                        <div>
+                            <div class="pos-stat-label">Stock disp.</div>
+                            <div class="pos-stat-value">
+                                <input type="text" class="form-control fw-bold" id="txtStock" readonly>
+                                <span class="pos-stat-suffix">unid.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pos-qty-row">
+                    <div class="pos-qty-card">
+                        <label class="form-label pos-label">Cantidad</label>
+                        <input type="number" class="form-control form-control-lg text-center fw-bold pos-qty" id="txtCantidad" value="1" min="1">
+                    </div>
+                    <button class="btn pos-add-btn w-100" id="btnAgregar">
+                        <i class="fas fa-cart-plus me-2"></i>Agregar al carrito
+                    </button>
+                </div>
+
+            </div>
+        </section>
+
+        <section class="pos-panel">
+            <div class="pos-panel-header">
+                <h3 class="pos-panel-title"><i class="fas fa-shopping-cart"></i>Carrito</h3>
+                <span class="pos-chip" id="badgeCount">0 items</span>
+            </div>
+            <div class="pos-cart-body">
+                <div class="table-responsive pos-cart-table">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th class="ps-3">Producto</th>
+                                <th class="text-center" style="width: 80px;">Cant.</th>
+                                <th class="text-end" style="width: 100px;">Precio</th>
+                                <th class="text-end" style="width: 100px;">Subtotal</th>
+                                <th style="width: 50px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaDetalle"></tbody>
+                    </table>
+
+                    <div id="emptyState" class="pos-empty">
+                        <i class="fas fa-shopping-basket"></i>
+                        <h5>El carrito está vacío</h5>
+                        <p class="mb-0">Agrega productos desde el buscador.</p>
+                    </div>
+                </div>
+
+                <div class="pos-checkout">
+                    <div class="pos-total-card">
+                        <div>
+                            <div class="pos-total-label">Total a pagar</div>
+                            <div class="small text-white-50 mt-1">Incluye descuentos y recargos aplicables</div>
+                        </div>
+                        <div class="pos-total-value" id="lblTotalGrande">S/. 0.00</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label pos-label">Cliente</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="fas fa-user"></i></span>
+                            <select id="cboCliente" class="form-select" style="width: 80%;"></select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label pos-label">Método de pago</label>
+                        <div class="pos-payment-options">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="metodoPago" id="pagoEfectivo" value="Efectivo" checked>
+                                <label class="form-check-label" for="pagoEfectivo"><i class="fas fa-money-bill-wave me-1"></i>Efectivo</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="metodoPago" id="pagoTarjeta" value="Tarjeta">
+                                <label class="form-check-label" for="pagoTarjeta"><i class="fas fa-credit-card me-1"></i>Tarjeta</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="metodoPago" id="pagoYape" value="Yape">
+                                <label class="form-check-label" for="pagoYape"><i class="fas fa-mobile-alt me-1"></i>Yape</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="metodoPago" id="pagoPlin" value="Plin">
+                                <label class="form-check-label" for="pagoPlin"><i class="fas fa-mobile-alt me-1"></i>Plin</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="metodoPago" id="pagoQR" value="QR">
+                                <label class="form-check-label" for="pagoQR"><i class="fas fa-qrcode me-1"></i>QR</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="panelEfectivo" class="row g-2 pos-cash-grid mx-0">
+                        <div class="col-6">
+                            <label class="form-label pos-label">Recibido (S/.)</label>
+                            <input type="number" id="txtMontoRecibido" class="form-control text-end fw-bold" step="0.50" min="0" placeholder="0.00">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label pos-label">Vuelto (S/.)</label>
+                            <input type="text" id="txtVuelto" class="form-control text-end fw-bold bg-white" readonly value="0.00">
+                        </div>
+                    </div>
+                    <div class="pos-discount">
+                        <label class="form-label pos-label">Descuento (S/.)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="fas fa-minus-circle"></i></span>
+                            <input type="number" id="txtDescuento" class="form-control text-end fw-bold" value="0.00" step="0.50" min="0">
+                        </div>
+                        <small id="ayudaDescuento" class="form-text text-muted">Cajero: máximo 30% del subtotal. Administrador: descuentos mayores con confirmación.</small>
+                    </div>
+                    <button class="btn pos-process-btn w-100" id="btnTerminar">
+                        <i class="fas fa-check-circle me-2"></i>Procesar venta
+                    </button>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+@section Scripts {
+        <script>
+        // Variables globales
+        const esAdministrador = @Html.Raw(Json.Serialize(User.IsInRole("Administrador")));
+        const descuentoMaximoCajeroPct = 30;
+        const recargoTarjetaPct = 5;
+        let _productosLista = [];
+        let _subtotal = 0;
+        let _descuento = 0;
+        let _total = 0;
+        const claveOperacion = 'ventaPendiente:' + @Html.Raw(Json.Serialize(User.Identity.Name));
+        let ventaPendiente = JSON.parse(sessionStorage.getItem(claveOperacion) || 'null');
+        let procesando = false;
+        function stockDisponible(productoId, stockOriginal) {
+            const existente = _productosLista.find(x => String(x.ProductoId) === String(productoId));
+            return Math.max(0, Number(stockOriginal) - (existente ? Number(existente.Cantidad) : 0));
+        }
+
+        function normalizarProductoResultado(producto) {
+            const disponible = stockDisponible(producto.id, producto.stock);
+            return {
+                ...producto,
+                stockDisponible: disponible,
+                text: `${producto.nombre || producto.text} | Stock: ${disponible}`,
+                disabled: disponible <= 0
+            };
+        }
+
+        function nuevoIdOperacion() {
+            const bytes = crypto.getRandomValues(new Uint8Array(16));
+            bytes[6] = (bytes[6] & 15) | 64; bytes[8] = (bytes[8] & 63) | 128;
+            const h = [...bytes].map(b => b.toString(16).padStart(2, '0')).join('');
+            return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
+        }
+
+        $(document).ready(function() {
+            $('#avisoOperacion').toggleClass('d-none', !ventaPendiente);
+            
+            // 1. SELECT2 PRODUCTOS
+            $('#cboProducto').select2({
+                ajax: {
+                    url: '@Url.Action("BuscarProductos", "Ventas")',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) { return { term: params.term || '', page: params.page || 1 }; },
+                    processResults: function (data) {
+                        return {
+                            results: (data.results || []).map(normalizarProductoResultado),
+                            pagination: data.pagination
+                        };
+                    }
+                },
+                placeholder: 'Seleccionar o buscar producto...',
+                minimumInputLength: 0,
+                theme: 'bootstrap-5',
+                width: '100%',
+                language: { noResults: () => "No hay productos activos que coincidan", searching: () => "Buscando...", loadingMore: () => "Cargando más productos...", errorLoading: () => "No se pudo cargar el catálogo. Reabre la lista o verifica tu sesión." }
+            });
+
+            // 2. SELECT2 CLIENTES
+            $('#cboCliente').select2({
+                ajax: {
+                    url: '@Url.Action("BuscarClientes", "Ventas")',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) { return { term: params.term || '', page: params.page || 1 }; },
+                    processResults: function (data) { return data; }
+                },
+                placeholder: 'Público General',
+                minimumInputLength: 0,
+                language: { noResults: () => "No hay clientes activos que coincidan", searching: () => "Buscando...", errorLoading: () => "No se pudieron cargar los clientes. Verifica tu sesión." },
+                allowClear: true,
+                theme: 'bootstrap-5',
+                width: '100%'
+            });
+
+            // 3. EVENTO AL SELECCIONAR PRODUCTO
+            $('#cboProducto').on('select2:select', function (e) {
+                var data = e.params.data;
+                $('#txtPrecio').val(data.precio.toFixed(2));
+                $('#txtStock').val(stockDisponible(data.id, data.stock));
+                $('#txtStock').data('stock-original', data.stock);
+                $('#txtCantidad').focus();
+            });
+
+            // 4. BOTÓN AGREGAR
+            $('#btnAgregar').click(function() {
+                // Obtener datos
+                var id = $('#cboProducto').val();
+                var nombre = $('#cboProducto').select2('data')[0]?.nombre || $('#cboProducto option:selected').text();
+                var precio = parseFloat($('#txtPrecio').val());
+                var stockOriginal = parseInt($('#txtStock').data('stock-original'));
+                var stock = parseInt($('#txtStock').val());
+                var cantidad = Number($('#txtCantidad').val());
+
+                // Validaciones
+                if (!id) { Swal.fire('Aviso', 'Seleccione un producto', 'warning'); return; }
+                if (!Number.isInteger(cantidad) || cantidad < 1 || !Number.isFinite(precio) || !Number.isFinite(stock) || !Number.isFinite(stockOriginal)) { Swal.fire('Aviso', 'Selecciona un producto válido e ingresa una cantidad entera positiva.', 'warning'); return; }
+                if (stock < cantidad) { Swal.fire('Stock Insuficiente', `Solo quedan ${stock} unidades disponibles para agregar`, 'error'); return; }
+
+                // Verificar si ya existe en carrito
+                var existe = _productosLista.find(x => x.ProductoId == id);
+                if (existe) {
+                    existe.Cantidad += cantidad;
+                    existe.Total = existe.Cantidad * existe.Precio;
+                } else {
+                    _productosLista.push({
+                        ProductoId: id,
+                        Nombre: nombre,
+                        Precio: precio,
+                        Cantidad: cantidad,
+                        StockOriginal: stockOriginal,
+                        Total: cantidad * precio
+                    });
+                }
+
+                // Limpiar y Renderizar
+                $('#cboProducto').val(null).trigger('change');
+                $('#txtPrecio').val('');
+                $('#txtStock').val('');
+                $('#txtStock').removeData('stock-original');
+                $('#txtCantidad').val(1);
+                
+                renderizarCarrito();
+            });
+
+            // COMPOSICIÓN DINÁMICA DE DESCUENTO
+            $('#txtDescuento').on('input', function() {
+                let valor = parseFloat($(this).val());
+                if(isNaN(valor) || valor < 0) {
+                    _descuento = 0;
+                } else {
+                    _descuento = valor;
+                }
+                renderizarCarrito();
+            });
+
+            // LÓGICA VUELTO DE EFECTIVO
+            $('input[name="metodoPago"]').change(function() {
+                if (this.value === 'Efectivo') {
+                    $('#panelEfectivo').slideDown();
+                } else {
+                    $('#panelEfectivo').slideUp();
+                }
+                renderizarCarrito();
+            });
+
+            $('#txtMontoRecibido').on('input', function() {
+                calcularVuelto();
+            });
+
+
+            // 5. BOTÓN PROCESAR VENTA (MODIFICADO PARA TICKET)
+            $('#btnTerminar').click(function() {
+                if (procesando) return;
+                if (ventaPendiente) { enviarVenta(ventaPendiente); return; }
+                if (_descuento > _subtotal) { Swal.fire('Descuento inválido', 'El descuento no puede superar el subtotal.', 'warning'); return; }
+                if (_total <= 0) { Swal.fire('Descuento inválido', 'El total de la venta debe ser mayor a S/. 0.00.', 'warning'); return; }
+                const descuentoMaximoCajero = Number((_subtotal * descuentoMaximoCajeroPct / 100).toFixed(2));
+                if (!esAdministrador && _descuento > descuentoMaximoCajero) {
+                    Swal.fire('Descuento requiere autorización', `El cajero solo puede descontar hasta ${descuentoMaximoCajeroPct}%: S/. ${descuentoMaximoCajero.toFixed(2)}.`, 'warning');
+                    return;
+                }
+                if (_productosLista.length === 0) {
+                    Swal.fire('Carrito Vacío', 'Agregue productos antes de vender', 'warning');
+                    return;
+                }
+
+                var metodoPagoSelected = $('input[name="metodoPago"]:checked').val() || 'Efectivo';
+                
+                if (metodoPagoSelected === 'Efectivo') {
+                    let recibido = parseFloat($('#txtMontoRecibido').val());
+                    if (isNaN(recibido) || recibido < _total) {
+                        Swal.fire('Efectivo Insuficiente', 'El monto recibido debe ser mayor o igual al total a cobrar.', 'warning');
+                        return;
+                    }
+                }
+
+                var venta = {
+                    OperacionId: nuevoIdOperacion(),
+                    ClienteId: $('#cboCliente').val(),
+                    Total: Number(_total.toFixed(2)),
+                    Descuento: Number(_descuento.toFixed(2)),
+                    MetodoPago: metodoPagoSelected,
+                    Detalles: _productosLista
+                };
+
+                procesando = true;
+                $('#btnTerminar').prop('disabled', true);
+                const descuentoAltoAdmin = esAdministrador && _descuento > descuentoMaximoCajero;
+                Swal.fire({
+                    title: '¿Procesar Venta?',
+                    text: descuentoAltoAdmin
+                        ? `Descuento mayor al ${descuentoMaximoCajeroPct}%: S/. ${_descuento.toFixed(2)}. Total a cobrar: S/. ${_total.toFixed(2)}`
+                        : `Total a cobrar: S/. ${_total.toFixed(2)}`,
+                    icon: descuentoAltoAdmin ? 'warning' : 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, Cobrar',
+                    confirmButtonColor: '#198754',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        enviarVenta(venta);
+                    } else {
+                        procesando = false;
+                        $('#btnTerminar').prop('disabled', false);
+                    }
+                });
+            });
+
+            function enviarVenta(venta) {
+                        procesando = true;
+                        $('#btnTerminar').prop('disabled', true);
+                        ventaPendiente = venta;
+                        try { sessionStorage.setItem(claveOperacion, JSON.stringify(venta)); }
+                        catch {
+                            procesando = false;
+                            $('#btnTerminar').prop('disabled', false);
+                            Swal.fire('Error', 'No se pudo guardar la operación en este navegador. No se envió la venta.', 'error');
+                            return;
+                        }
+                        $('#avisoOperacion').removeClass('d-none');
+                        $.ajax({
+                            url: '@Url.Action("Registrar", "Ventas")',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val() },
+                            data: JSON.stringify(venta),
+                            success: function(resp) {
+                                ventaPendiente = null;
+                                sessionStorage.removeItem(claveOperacion);
+                                $('#avisoOperacion').addClass('d-none');
+                                if (resp.exito) {
+                                    // --- LÓGICA DE TICKET ---
+                                    // Limpiamos todo primero
+                                    _productosLista = [];
+                                    _descuento = 0;
+                                    $('#txtDescuento').val('0.00');
+                                    $('#txtMontoRecibido').val('');
+                                    $('#txtVuelto').val('0.00');
+                                    renderizarCarrito();
+                                    $('#cboCliente').val(null).trigger('change');
+
+                                    // Preguntamos si quiere imprimir
+                                    Swal.fire({
+                                        title: '¡Venta Exitosa!',
+                                        text: `Comprobante: ${resp.estadoEmision || 'Consulta el historial'}. ¿Deseas imprimir el ticket local?`,
+                                        icon: 'success',
+                                        showCancelButton: true,
+                                        confirmButtonText: '<i class="fas fa-print"></i> Imprimir Ticket',
+                                        cancelButtonText: 'Nueva Venta',
+                                        confirmButtonColor: '#0d6efd',
+                                        cancelButtonColor: '#6c757d'
+                                    }).then((printResult) => {
+                                        if (printResult.isConfirmed) {
+                                            // Redirigimos al ticket en otra pestaña usando el string devuelto con la ruta
+                                            window.open('@Url.Action("Ticket", "Ventas")/' + resp.idVenta, '_blank');
+                                        }
+                                    });
+
+                                } else {
+                                    Swal.fire('Error', resp.mensaje, 'error');
+                                }
+                            },
+                            error: function() {
+                                Swal.fire('Resultado pendiente', 'La respuesta no llegó. Pulsa Procesar venta para reintentar la misma operación sin duplicarla.', 'warning');
+                            },
+                            complete: function() {
+                                procesando = false;
+                                $('#btnTerminar').prop('disabled', false);
+                            }
+                        });
+            }
+
+        });
+
+        // FUNCIONES AUXILIARES
+        function renderizarCarrito() {
+            $('#tablaDetalle').html('');
+            _subtotal = 0;
+
+            if (_productosLista.length > 0) {
+                $('#emptyState').hide();
+                
+                $.each(_productosLista, function(i, item) {
+                    _subtotal += item.Total;
+                    
+                    var fila = `
+                        <tr>
+                            <td class="ps-3 fw-bold small">${$('<div>').text(item.Nombre).html()}</td>
+                            <td class="text-center">${item.Cantidad}</td>
+                            <td class="text-end">${item.Precio.toFixed(2)}</td>
+                            <td class="text-end fw-bold">${item.Total.toFixed(2)}</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm text-danger" onclick="eliminarProducto(${i})">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    $('#tablaDetalle').append(fila);
+                });
+            } else {
+                $('#emptyState').show();
+            }
+
+            _subtotal = Number(_subtotal.toFixed(2));
+            const metodoPagoSelected = $('input[name="metodoPago"]:checked').val() || 'Efectivo';
+            const baseCentimos = Math.max(0, Math.round(_subtotal * 100) - Math.round(_descuento * 100));
+            // Redondeo positivo en céntimos igual a AwayFromZero del servidor.
+            const recargoCentimos = metodoPagoSelected === 'Tarjeta' ? Math.floor((baseCentimos * recargoTarjetaPct + 50) / 100) : 0;
+            _total = (baseCentimos + recargoCentimos) / 100;
+            if (_total < 0) { _total = 0; }
+
+            $('#lblTotalGrande').text('S/. ' + _total.toFixed(2));
+            $('#badgeCount').text(_productosLista.length + ' items');
+            
+            if(typeof calcularVuelto === "function") {
+                calcularVuelto();
+            }
+        }
+
+        function eliminarProducto(index) {
+            _productosLista.splice(index, 1);
+            renderizarCarrito();
+        }
+        function calcularVuelto() {
+            const recibido = Number($('#txtMontoRecibido').val()) || 0;
+            $('#txtVuelto').val(Math.max(0, recibido - _total).toFixed(2));
+        }
+    </script>
+}

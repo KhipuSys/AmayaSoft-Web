@@ -1,0 +1,204 @@
+@model IEnumerable<MiniMarket.Web.Models.MovimientoInventario>
+
+@{
+    ViewData["Title"] = "Kardex de Movimientos";
+    var producto = ViewBag.ProductoObjeto as MiniMarket.Web.Models.Producto;
+    int totalEntradas = Model != null ? Model.Where(m => m.TipoMovimiento.Contains("ENTRADA") || (m.TipoMovimiento == "AJUSTE" && m.Referencia.Contains("ENTRADA"))).Sum(m => m.Cantidad) : 0;
+    int totalSalidas = Model != null ? Model.Where(m => m.TipoMovimiento.Contains("SALIDA") || m.TipoMovimiento == "VENTA" || (m.TipoMovimiento == "AJUSTE" && m.Referencia.Contains("SALIDA"))).Sum(m => m.Cantidad) : 0;
+}
+
+<div class="container-fluid py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-primary mb-1"><i class="fas fa-exchange-alt me-2"></i>Kardex de Movimientos e Inventario</h3>
+            <p class="text-muted small mb-0">Trazabilidad completa de auditoría física: compras, ventas y ajustes manuales.</p>
+        </div>
+        @if (User.IsInRole("Administrador"))
+        {
+            <a asp-action="Ajuste" class="btn btn-warning shadow-sm fw-bold">
+                <i class="fas fa-sliders-h me-2"></i>Ajuste Manual de Stock
+            </a>
+        }
+    </div>
+
+    @if (TempData["Exito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["Exito"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Panel de Búsqueda y Filtros -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form asp-action="Index" method="get" class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label small fw-bold">Seleccionar Producto a Auditar:</label>
+                    <select name="productoId" class="form-select select2" onchange="this.form.submit()">
+                        <option value="">-- Seleccione un producto --</option>
+                        @foreach (var item in (SelectList)ViewBag.Productos)
+                        {
+                            if (ViewBag.ProductoSeleccionado?.ToString() == item.Value)
+                            {
+                                <option value="@item.Value" selected>@item.Text</option>
+                            }
+                            else
+                            {
+                                <option value="@item.Value">@item.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Desde:</label>
+                    <input type="date" name="desde" class="form-control form-control-sm" value="@ViewBag.Desde" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Hasta:</label>
+                    <input type="date" name="hasta" class="form-control form-control-sm" value="@ViewBag.Hasta" />
+                </div>
+                <div class="col-md-1 d-flex gap-1">
+                    <button type="submit" class="btn btn-sm btn-primary w-100" title="Filtrar"><i class="fas fa-filter"></i></button>
+                    <a asp-action="Index" class="btn btn-sm btn-outline-secondary" title="Limpiar"><i class="fas fa-undo"></i></a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (producto != null)
+    {
+        <!-- Resumen del Producto Consultado -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 border-start border-primary border-4">
+                    <div class="card-body">
+                        <h6 class="text-muted small mb-1">Stock Actual en Almacén</h6>
+                        <h3 class="fw-bold text-primary mb-0">@producto.Stock unidades</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 border-start border-success border-4">
+                    <div class="card-body">
+                        <h6 class="text-muted small mb-1">Total Ingresos / Entradas (+)</h6>
+                        <h3 class="fw-bold text-success mb-0">+@totalEntradas unidades</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 border-start border-danger border-4">
+                    <div class="card-body">
+                        <h6 class="text-muted small mb-1">Total Salidas / Ventas (-)</h6>
+                        <h3 class="fw-bold text-danger mb-0">-@totalSalidas unidades</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (Model != null && Model.Any())
+    {
+        <!-- Tabla con Exportación -->
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle w-100" id="tablaKardex">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Fecha y Hora</th>
+                                <th>Tipo</th>
+                                <th>Referencia</th>
+                                <th>Motivo / Glosa</th>
+                                <th class="text-center">Cantidad</th>
+                                <th>Usuario Responsable</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                var esEntrada = item.TipoMovimiento == "ENTRADA" || item.TipoMovimiento == "AJUSTE-ENTRADA" || (item.TipoMovimiento == "AJUSTE" && item.Referencia.Contains("ENTRADA"));
+                                var badgeColor = esEntrada ? "success" : item.TipoMovimiento == "AJUSTE" ? "warning text-dark" : "danger";
+                                var icono = esEntrada ? "fa-arrow-down" : item.TipoMovimiento == "AJUSTE" ? "fa-sliders-h" : "fa-arrow-up";
+
+                                <tr>
+                                    <td>@item.Fecha.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                                    <td>
+                                        <span class="badge bg-@badgeColor">
+                                            <i class="fas @icono me-1"></i>@item.TipoMovimiento
+                                        </span>
+                                    </td>
+                                    <td class="fw-bold">@item.Referencia</td>
+                                    <td class="text-muted small">@item.Motivo</td>
+                                    <td class="text-center fw-bold fs-6">
+                                        @if (esEntrada)
+                                        {
+                                            <span class="text-success">+@item.Cantidad u.</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-danger">-@item.Cantidad u.</span>
+                                        }
+                                    </td>
+                                    <td class="text-muted small"><i class="fas fa-user-circle me-1"></i>@item.Usuario</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+    else if (ViewBag.ProductoSeleccionado != null)
+    {
+        <div class="alert alert-info text-center py-4 border-0 shadow-sm">
+            <i class="fas fa-box-open fa-2x d-block mb-2 text-primary"></i>
+            <strong>Sin movimientos registrados</strong>
+            <p class="text-muted mb-0 small">No se encontraron entradas ni salidas para este producto en el rango seleccionado.</p>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('.select2').select2({ 
+                theme: 'bootstrap-5', 
+                width: '100%', 
+                placeholder: "Buscar producto..." 
+            });
+
+            if ($('#tablaKardex').length) {
+                $('#tablaKardex').DataTable({
+                    dom: '<"d-flex justify-content-between align-items-center mb-3"Bf>rt<"d-flex justify-content-between align-items-center mt-3"ip>',
+                    buttons: [
+                        {
+                            extend: 'excelHtml5',
+                            text: '<i class="fas fa-file-excel me-1"></i> Excel',
+                            className: 'btn btn-sm btn-success',
+                            title: 'Kardex_Auditoria_AmayaSoft'
+                        },
+                        {
+                            extend: 'pdfHtml5',
+                            text: '<i class="fas fa-file-pdf me-1"></i> PDF',
+                            className: 'btn btn-sm btn-danger',
+                            orientation: 'landscape',
+                            pageSize: 'A4',
+                            title: 'Kardex de Inventario - AmayaSoft'
+                        },
+                        {
+                            extend: 'print',
+                            text: '<i class="fas fa-print me-1"></i> Imprimir',
+                            className: 'btn btn-sm btn-secondary'
+                        }
+                    ],
+                    order: [[0, "desc"]],
+                    language: { 
+                        url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json' 
+                    },
+                    pageLength: 10
+                });
+            }
+        });
+    </script>
+}

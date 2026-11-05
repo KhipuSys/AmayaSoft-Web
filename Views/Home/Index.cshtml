@@ -1,0 +1,430 @@
+@model MiniMarket.Web.Models.DashboardViewModel
+@using MiniMarket.Web.Data
+@inject ApplicationDbContext _context
+
+@{
+    ViewData["Title"] = "Dashboard";
+    ViewData["BodyClass"] = "dashboard-page";
+    var configuracion = _context.Configuraciones.FirstOrDefault();
+    var moneda = configuracion?.MonedaSimbolo ?? "S/.";
+    var ventas7Dias = Model.VentasGrafico?.Sum() ?? 0m;
+    var totalTop = Model.TopProductosCantidades?.Sum() ?? 0;
+    var totalCajeros = Model.VentasPorCajero?.Sum(x => x.Value) ?? 0m;
+    var diferenciaMensual = Model.VentasMesActual - Model.VentasMesAnterior;
+    var crecimientoSube = diferenciaMensual > 0;
+    var crecimientoBaja = diferenciaMensual < 0;
+    var maxVentasMes = Math.Max(Model.VentasMesActual, Model.VentasMesAnterior);
+    var ventasActualWidth = maxVentasMes > 0 ? Model.VentasMesActual / maxVentasMes * 100 : 0;
+    var ventasAnteriorWidth = maxVentasMes > 0 ? Model.VentasMesAnterior / maxVentasMes * 100 : 0;
+    var coloresTop = new[] { "#3563e9", "#0c9b78", "#16a3c7", "#8968e8", "#dc8a35", "#d65378" };
+    var totalAlertasStock = Model.ProductosStockBajo?.Count ?? 0;
+}
+
+<style>
+    .dashboard-v4 {
+        --dash-surface: #fff;
+        --dash-soft: #f7f9fd;
+        --dash-ink: #17243d;
+        --dash-muted: #56647b;
+        --dash-line: #e2e8f2;
+        --dash-blue: #3563e9;
+        --dash-green: #087c60;
+        --dash-red: #a8322b;
+        --dash-amber: #8a4c0a;
+        --dash-radius: 20px;
+        --dash-shadow: 0 10px 30px rgba(23,36,61,.06);
+        color: var(--dash-ink);
+        padding-bottom: .5rem;
+    }
+    .dashboard-v4 .dash-kpi { background: linear-gradient(145deg,var(--dash-surface),var(--dash-soft)); border: 1px solid var(--dash-line); border-radius: var(--dash-radius); box-shadow: var(--dash-shadow); height: 100%; min-height: 162px; overflow: hidden; padding: 1.1rem 1.2rem; }
+    .dashboard-v4 .dash-kpi-top { align-items: center; display: flex; gap: .75rem; }
+    .dashboard-v4 .dash-kpi-icon { align-items: center; background: var(--accent-soft); border-radius: 13px; color: var(--accent); display: inline-flex; flex: 0 0 42px; font-size: 1rem; height: 42px; justify-content: center; width: 42px; }
+    .dashboard-v4 .dash-kpi-label { color: var(--dash-muted); font-size: .82rem; font-weight: 750; line-height: 1.35; margin: 0; }
+    .dashboard-v4 .dash-kpi-value { color: var(--dash-ink); font-size: clamp(1.65rem,2.5vw,2.3rem); font-variant-numeric: tabular-nums; font-weight: 850; letter-spacing: -.04em; line-height: 1.15; margin: 1rem 0 0; overflow-wrap: anywhere; }
+    .dashboard-v4 .dash-kpi-note { color: var(--dash-muted); display: block; font-size: .77rem; line-height: 1.4; margin-top: .4rem; }
+
+    .dashboard-v4 .dash-panel { background: var(--dash-surface); border: 1px solid var(--dash-line); border-radius: var(--dash-radius); box-shadow: var(--dash-shadow); height: 100%; min-width: 0; overflow: hidden; }
+    .dashboard-v4 .dash-panel-header { align-items: center; border-bottom: 1px solid var(--dash-line); display: flex; flex-wrap: wrap; gap: .8rem 1rem; justify-content: space-between; min-height: 72px; padding: 1rem 1.2rem; }
+    .dashboard-v4 .dash-heading { min-width: 0; }
+    .dashboard-v4 .dash-panel-title { align-items: center; color: var(--dash-ink); display: flex; font-size: .98rem; font-weight: 850; gap: .6rem; margin: 0; }
+    .dashboard-v4 .dash-title-icon { align-items: center; background: #edf2ff; border-radius: 10px; color: var(--dash-blue); display: inline-flex; flex: 0 0 32px; height: 32px; justify-content: center; width: 32px; }
+    .dashboard-v4 .dash-panel-subtitle { color: var(--dash-muted); display: block; font-size: .76rem; line-height: 1.4; margin: .38rem 0 0 2.6rem; }
+    .dashboard-v4 .dash-period { background: var(--dash-soft); border: 1px solid var(--dash-line); border-radius: 999px; color: var(--dash-muted); font-size: .74rem; font-weight: 750; padding: .38rem .7rem; white-space: nowrap; }
+    .dashboard-v4 .dash-panel-body { padding: 1.15rem 1.2rem; }
+    .dashboard-v4 .dash-chart-total { color: var(--dash-ink); font-size: 1.35rem; font-variant-numeric: tabular-nums; font-weight: 900; letter-spacing: -.035em; margin: .1rem 0 .15rem; }
+    .dashboard-v4 .dash-chart-caption { color: var(--dash-muted); font-size: .75rem; margin-bottom: .3rem; }
+    .dashboard-v4 .dash-sales-chart { height: 340px; width: 100%; }
+
+    .dashboard-v4 .dash-donut-wrap { height: 215px; margin: .1rem auto .65rem; max-width: 245px; position: relative; width: 100%; }
+    .dashboard-v4 .dash-donut-chart { height: 100%; width: 100%; }
+    .dashboard-v4 .dash-sales-row { align-items: stretch; }
+    .dashboard-v4 .dash-sales-row .dash-panel { height: 100%; }
+    .dashboard-v4 .dash-donut-legend { display: grid; gap: .3rem .4rem; grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .dashboard-v4 .dash-product-row { align-items: center; background: transparent; border: 0; display: grid; gap: .4rem; grid-template-columns: 8px minmax(0,1fr) auto; min-height: 38px; padding: .28rem .18rem; }
+    .dashboard-v4 .dash-product-dot { border-radius: 50%; height: 7px; width: 7px; }
+    .dashboard-v4 .dash-product-name { color: var(--dash-ink); font-size: .74rem; font-weight: 750; line-height: 1.2; min-width: 0; overflow-wrap: anywhere; }
+    .dashboard-v4 .dash-product-share { align-items: center; display: grid; gap: .4rem; grid-template-columns: auto minmax(24px,1fr); margin-top: .16rem; }
+    .dashboard-v4 .dash-product-percent { color: var(--dash-muted); font-size: .64rem; font-weight: 600; white-space: nowrap; }
+    .dashboard-v4 .dash-product-track { background: var(--dash-line); border-radius: 999px; display: block; height: 4px; min-width: 24px; overflow: hidden; }
+    .dashboard-v4 .dash-product-track span { background: var(--product-color); border-radius: inherit; display: block; height: 100%; }
+    .dashboard-v4 .dash-product-quantity { color: var(--dash-ink); font-size: .68rem; font-variant-numeric: tabular-nums; font-weight: 850; white-space: nowrap; }
+    .dashboard-v4 .dash-empty { color: var(--dash-muted); font-size: .84rem; line-height: 1.5; padding: .8rem; text-align: center; }
+
+    .dashboard-v4 .dash-stock-header { align-items: center; border-bottom: 1px solid var(--dash-line); display: flex; flex-wrap: wrap; gap: .9rem; justify-content: space-between; padding: 1.1rem 1.3rem; }
+    .dashboard-v4 .dash-stock-heading { align-items: center; display: flex; gap: .8rem; min-width: 0; }
+    .dashboard-v4 .dash-stock-heading-icon { align-items: center; background: #fff3e4; border-radius: 13px; color: var(--dash-amber); display: inline-flex; flex: 0 0 42px; height: 42px; justify-content: center; width: 42px; }
+    .dashboard-v4 .dash-stock.is-clear .dash-stock-heading-icon { background: #eaf8f3; color: #08745b; }
+    .dashboard-v4 .dash-stock-title { color: var(--dash-ink); font-size: 1rem; font-weight: 850; margin: 0; }
+    .dashboard-v4 .dash-stock-subtitle { color: var(--dash-muted); font-size: .77rem; line-height: 1.4; margin: .25rem 0 0; }
+    .dashboard-v4 .dash-stock-total { align-items: center; background: #fff3e4; border-radius: 999px; color: var(--dash-amber); display: inline-flex; font-size: .76rem; font-weight: 850; gap: .4rem; padding: .45rem .75rem; white-space: nowrap; }
+    .dashboard-v4 .dash-stock.is-clear .dash-stock-total { background: #eaf8f3; color: #08745b; }
+    .dashboard-v4 .dash-stock-list { display: grid; gap: .65rem; padding: 1rem 1.3rem; }
+    .dashboard-v4 .dash-stock-item { align-items: center; background: var(--dash-soft); border: 1px solid var(--dash-line); border-radius: 15px; display: grid; gap: .85rem; grid-template-columns: minmax(0,1fr) minmax(150px,.72fr) auto; padding: .75rem .9rem; }
+    .dashboard-v4 .dash-stock-name { color: var(--dash-ink); font-size: .86rem; font-weight: 800; line-height: 1.35; overflow-wrap: anywhere; }
+    .dashboard-v4 .dash-stock-code { color: var(--dash-muted); font-size: .72rem; margin-top: .22rem; }
+    .dashboard-v4 .dash-stock-level { min-width: 0; }
+    .dashboard-v4 .dash-stock-level-copy { align-items: baseline; color: var(--dash-muted); display: flex; font-size: .72rem; justify-content: space-between; gap: .5rem; }
+    .dashboard-v4 .dash-stock-level-copy strong { color: var(--dash-ink); font-size: .8rem; font-variant-numeric: tabular-nums; }
+    .dashboard-v4 .dash-stock-track { background: var(--dash-line); border-radius: 999px; height: 7px; margin-top: .45rem; overflow: hidden; }
+    .dashboard-v4 .dash-stock-track span { background: #d18732; border-radius: inherit; display: block; height: 100%; }
+    .dashboard-v4 .dash-stock-item.is-critical .dash-stock-track span, .dashboard-v4 .dash-stock-item.is-out .dash-stock-track span { background: var(--dash-red); }
+    .dashboard-v4 .dash-stock-state { border-radius: 999px; font-size: .7rem; font-weight: 850; padding: .4rem .65rem; text-align: center; white-space: nowrap; }
+    .dashboard-v4 .dash-stock-state.is-out, .dashboard-v4 .dash-stock-state.is-critical { background: #fff0ef; color: #a8322b; }
+    .dashboard-v4 .dash-stock-state.is-low { background: #fff3e4; color: #8a4c0a; }
+    .dashboard-v4 .dash-stock-state.is-limit { background: #f2f4f8; color: #56647b; }
+    .dashboard-v4 .dash-stock-empty { align-items: center; background: var(--dash-soft); border: 0; border-radius: 16px; color: var(--dash-muted); display: grid; gap: 1rem; grid-template-columns: 46px minmax(0,1fr) auto; margin: 1rem 1.3rem; padding: .95rem 1.05rem; }
+    .dashboard-v4 .dash-stock-ok-icon { align-items: center; background: #e1f5eb; border: 0; border-radius: 14px; color: #08745b; display: inline-flex; height: 44px; justify-content: center; width: 44px; }
+    .dashboard-v4 .dash-stock-empty-copy { display: grid; gap: .14rem; min-width: 0; }
+    .dashboard-v4 .dash-stock-empty strong { color: var(--dash-ink); font-size: .96rem; line-height: 1.3; }
+    .dashboard-v4 .dash-stock-empty-copy > span:last-child { font-size: .78rem; line-height: 1.4; }
+    .dashboard-v4 .dash-stock-empty .dash-text-link { align-items: center; background: transparent; border: 0; border-radius: 0; display: inline-flex; gap: .4rem; justify-content: center; padding: 0; white-space: nowrap; }
+    .dashboard-v4 .dash-stock-footer { align-items: center; border-top: 1px solid var(--dash-line); color: var(--dash-muted); display: flex; flex-wrap: wrap; font-size: .79rem; gap: .7rem; justify-content: space-between; padding: .85rem 1.3rem; }
+    .dashboard-v4 .dash-stock-more { color: var(--dash-muted); font-size: .77rem; padding: 0 .2rem; }
+    .dashboard-v4 .dash-text-link { color: var(--dash-blue); font-size: .8rem; font-weight: 800; text-decoration: none; }
+    .dashboard-v4 .dash-text-link:hover { text-decoration: underline; }
+
+    .dashboard-v4 .dash-month-grid { display: grid; gap: .8rem; grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .dashboard-v4 .dash-month-card { background: var(--dash-soft); border: 0; border-radius: 15px; min-width: 0; padding: 1rem; }
+    .dashboard-v4 .dash-month-label { color: var(--dash-muted); font-size: .7rem; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
+    .dashboard-v4 .dash-month-value { color: var(--dash-ink); font-size: clamp(1.25rem,1.8vw,1.65rem); font-variant-numeric: tabular-nums; font-weight: 900; letter-spacing: -.04em; margin-top: .45rem; overflow-wrap: anywhere; }
+    .dashboard-v4 .dash-month-bar { background: var(--dash-line); border-radius: 999px; height: 6px; margin-top: .8rem; overflow: hidden; }
+    .dashboard-v4 .dash-month-bar span { background: var(--dash-blue); border-radius: inherit; display: block; height: 100%; }
+    .dashboard-v4 .dash-month-card.previous .dash-month-bar span { background: #91a2c0; }
+    .dashboard-v4 .dash-change { align-items: center; border-radius: 999px; display: inline-flex; font-size: .74rem; font-weight: 850; gap: .35rem; padding: .4rem .7rem; }
+    .dashboard-v4 .dash-change.up { background: #eaf8f3; color: #08745b; }
+    .dashboard-v4 .dash-change.down { background: #fff0ef; color: #a8322b; }
+    .dashboard-v4 .dash-change.flat { background: var(--dash-soft); color: var(--dash-muted); }
+    .dashboard-v4 .dash-month-summary { color: var(--dash-muted); font-size: .8rem; line-height: 1.5; margin: .85rem 0 0; }
+    .dashboard-v4 .dash-month-summary strong { color: var(--dash-ink); }
+
+    .dashboard-v4 .dash-cashier-list { display: grid; gap: 1rem; }
+    .dashboard-v4 .dash-cashier { background: transparent; border: 0; border-radius: 0; padding: .2rem 0 .1rem; }
+    .dashboard-v4 .dash-cashier-row { align-items: center; display: grid; gap: .75rem; grid-template-columns: 42px minmax(0,1fr) auto; }
+    .dashboard-v4 .dash-cashier-icon { align-items: center; background: #edf2ff; border-radius: 12px; color: var(--dash-blue); display: inline-flex; height: 42px; justify-content: center; width: 42px; }
+    .dashboard-v4 .dash-cashier-name { color: var(--dash-ink); font-size: .83rem; font-weight: 800; overflow-wrap: anywhere; }
+    .dashboard-v4 .dash-cashier-share { color: var(--dash-muted); font-size: .72rem; margin-top: .16rem; }
+    .dashboard-v4 .dash-cashier-total { color: var(--dash-ink); font-size: .84rem; font-variant-numeric: tabular-nums; font-weight: 850; white-space: nowrap; }
+    .dashboard-v4 .dash-cashier-track { background: var(--dash-line); border-radius: 999px; height: 5px; margin: .65rem 0 0 3.15rem; overflow: hidden; }
+    .dashboard-v4 .dash-cashier-track span { background: var(--dash-blue); border-radius: inherit; display: block; height: 100%; }
+
+    .dashboard-v4 > section { animation: dash-enter 460ms cubic-bezier(.2,.75,.25,1) both; }
+    .dashboard-v4 > section:nth-of-type(1) { animation-delay: 45ms; }
+    .dashboard-v4 > section:nth-of-type(2) { animation-delay: 90ms; }
+    .dashboard-v4 > section:nth-of-type(3) { animation-delay: 135ms; }
+    .dashboard-v4 > section:nth-of-type(4) { animation-delay: 180ms; }
+    @@keyframes dash-enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .dashboard-v4 :is(a,button,[tabindex="0"]):focus-visible { outline: 3px solid var(--dash-blue); outline-offset: 3px; }
+    body.contraste-oscuro .dashboard-v4 { --dash-surface:#17150f; --dash-soft:#211d14; --dash-ink:#f8e7b0; --dash-muted:#dfc98f; --dash-line:#594a2d; --dash-blue:#fcd34d; --dash-green:#9ce5c8; --dash-red:#ffaaa3; --dash-amber:#ffd49a; --dash-shadow:none; }
+    body.contraste-oscuro .dashboard-v4 .dash-panel-icon, body.contraste-oscuro .dashboard-v4 .dash-kpi-icon, body.contraste-oscuro .dashboard-v4 .dash-cashier-icon { background:#302813; color:var(--dash-blue); }
+    body.contraste-oscuro .dashboard-v4 .dash-stock-heading-icon { background:#332311; color:#ffd49a; }
+    body.contraste-oscuro .dashboard-v4 .dash-stock.is-clear .dash-stock-heading-icon, body.contraste-oscuro .dashboard-v4 .dash-stock-ok-icon { background:#173328; color:#9ce5c8; }
+    body.contraste-oscuro .dashboard-v4 .dash-stock-total, body.contraste-oscuro .dashboard-v4 .dash-stock-state.is-low { background:#332311; color:#ffd49a; }
+    body.contraste-oscuro .dashboard-v4 .dash-stock.is-clear .dash-stock-total { background:#173328; color:#9ce5c8; }
+    body.contraste-oscuro .dashboard-v4 .dash-stock-state.is-out, body.contraste-oscuro .dashboard-v4 .dash-stock-state.is-critical { background:#3b211e; color:#ffaaa3; }
+    body.contraste-oscuro .dashboard-v4 .dash-stock-state.is-limit { background:#302813; color:#f8e7b0; }
+    body.contraste-oscuro .dashboard-v4 .dash-change.up { background:#173328; color:#9ce5c8; }
+    body.contraste-oscuro .dashboard-v4 .dash-change.down { background:#3b211e; color:#ffaaa3; }
+    body.contraste-oscuro .dashboard-v4 .dash-month-card.previous .dash-month-bar span { background:#c0ad7b; }
+    body.contraste-suave .dashboard-v4 { --dash-surface:#fff; --dash-soft:#f0f0f0; --dash-ink:#181818; --dash-muted:#454545; --dash-line:#999; --dash-blue:#303030; --dash-green:#333; --dash-red:#222; --dash-amber:#222; --dash-shadow:none; }
+    body.contraste-suave .dashboard-v4 .dash-panel-icon, body.contraste-suave .dashboard-v4 .dash-kpi-icon, body.contraste-suave .dashboard-v4 .dash-cashier-icon, body.contraste-suave .dashboard-v4 .dash-stock-heading-icon, body.contraste-suave .dashboard-v4 .dash-stock-ok-icon { background:#e5e5e5; color:#303030; }
+    body.contraste-suave .dashboard-v4 .dash-stock-total, body.contraste-suave .dashboard-v4 .dash-stock-state { background:#e5e5e5; color:#222; }
+    @@media (max-width:1199.98px) { .dashboard-v4 .dash-sales-chart { height:320px; } }
+    @@media (max-width:991.98px) { .dashboard-v4 .dash-sales-chart { height:300px; } }
+    @@media (max-width:767.98px) { .dashboard-v4 .dash-panel-header { align-items:flex-start; } .dashboard-v4 .dash-panel-body { padding:1rem; } .dashboard-v4 .dash-sales-chart { height:270px; } .dashboard-v4 .dash-donut-wrap { height:195px; } }
+    @@media (max-width:767.98px) { .dashboard-v4 .dash-stock-item { grid-template-columns:minmax(0,1fr) auto; } .dashboard-v4 .dash-stock-level { grid-column:1 / -1; grid-row:2; } .dashboard-v4 .dash-stock-state { grid-column:2; grid-row:1; } }
+    @@media (max-width:575.98px) { .dashboard-v4 .dash-donut-legend { grid-template-columns:minmax(0,1fr); } .dashboard-v4 .dash-stock-empty { gap:.7rem; grid-template-columns:42px minmax(0,1fr); margin:.75rem; padding:.85rem; } .dashboard-v4 .dash-stock-empty .dash-stock-ok-icon { height:40px; width:40px; } .dashboard-v4 .dash-stock-empty .dash-text-link { grid-column:2; justify-self:start; } }
+    @@media (max-width:575.98px) { .dashboard-v4 .dash-month-grid { grid-template-columns:minmax(0,1fr); } }
+    @@media (max-width:420px) { .dashboard-v4 .dash-panel-header { flex-direction:column; } .dashboard-v4 .dash-period { align-self:flex-start; } .dashboard-v4 .dash-stock-header { align-items:flex-start; flex-direction:column; } .dashboard-v4 .dash-stock-item { gap:.6rem; padding:.7rem; } .dashboard-v4 .dash-stock-footer { align-items:flex-start; flex-direction:column; } }
+    @@media (prefers-reduced-motion:reduce) { .dashboard-v4 *, .dashboard-v4 *::before, .dashboard-v4 *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; transition-duration:.01ms !important; } }
+</style>
+
+<main class="dashboard-v4">
+    <section class="row g-4 mb-4" aria-label="Indicadores del negocio">
+        <div class="col-sm-6 col-xl-3"><article class="dash-kpi" style="--accent:#3563e9;--accent-soft:#edf2ff"><div class="dash-kpi-top"><span class="dash-kpi-icon"><i class="fas fa-receipt" aria-hidden="true"></i></span><p class="dash-kpi-label">Ventas de hoy</p></div><p class="dash-kpi-value">@moneda @Model.VentasHoy.ToString("N2")</p><span class="dash-kpi-note">Ventas activas registradas hoy</span></article></div>
+        <div class="col-sm-6 col-xl-3"><article class="dash-kpi" style="--accent:#0c9b78;--accent-soft:#eaf8f3"><div class="dash-kpi-top"><span class="dash-kpi-icon"><i class="fas fa-chart-line" aria-hidden="true"></i></span><p class="dash-kpi-label">Ventas del mes</p></div><p class="dash-kpi-value">@moneda @Model.VentasMesActual.ToString("N2")</p><span class="dash-kpi-note">Acumulado del periodo actual</span></article></div>
+        <div class="col-sm-6 col-xl-3"><article class="dash-kpi" style="--accent:#8968e8;--accent-soft:#f1edff"><div class="dash-kpi-top"><span class="dash-kpi-icon"><i class="fas fa-box-open" aria-hidden="true"></i></span><p class="dash-kpi-label">Productos activos</p></div><p class="dash-kpi-value">@Model.TotalProductos</p><span class="dash-kpi-note">Disponibles en el catálogo</span></article></div>
+        <div class="col-sm-6 col-xl-3"><article class="dash-kpi" style="--accent:#d18732;--accent-soft:#fff4e5"><div class="dash-kpi-top"><span class="dash-kpi-icon"><i class="fas fa-boxes-stacked" aria-hidden="true"></i></span><p class="dash-kpi-label">Valor del inventario</p></div><p class="dash-kpi-value">@moneda @Model.CapitalEstimado.ToString("N2")</p><span class="dash-kpi-note">Estimado a precio de venta</span></article></div>
+    </section>
+
+    <section class="row g-4 mb-4 dash-sales-row" aria-label="Análisis de ventas">
+        <div class="col-xl-8"><article class="dash-panel"><header class="dash-panel-header"><div class="dash-heading"><h2 class="dash-panel-title"><span class="dash-title-icon"><i class="fas fa-chart-area" aria-hidden="true"></i></span>Tendencia de ingresos</h2><span class="dash-panel-subtitle">Ventas día a día · últimos siete días</span></div><span class="dash-period">@moneda @ventas7Dias.ToString("N2") total</span></header><div class="dash-panel-body"><div id="graficoVentas" class="dash-sales-chart" role="img" aria-label="Ingresos diarios de los últimos siete días"></div><p class="visually-hidden">Ingresos por día: @string.Join("; ", Model.FechasGrafico.Zip(Model.VentasGrafico, (fecha, venta) => $"{fecha}: {moneda} {venta:N2}"))</p></div></article></div>
+        <div class="col-xl-4">
+            <article class="dash-panel">
+                <header class="dash-panel-header">
+                    <div class="dash-heading">
+                        <h2 class="dash-panel-title"><span class="dash-title-icon"><i class="fas fa-chart-pie" aria-hidden="true"></i></span>Productos más vendidos</h2>
+                        <span class="dash-panel-subtitle">Distribución de unidades · Top 6</span>
+                    </div>
+                    <span class="dash-period">@totalTop unidades</span>
+                </header>
+                <div class="dash-panel-body">
+                    <div class="dash-donut-wrap"><div id="graficoTop" class="dash-donut-chart" role="img" aria-label="Proporción de unidades de los seis productos más vendidos"></div></div>
+                    <div class="dash-donut-legend">
+                        @if (Model.TopProductosNombres?.Any() == true)
+                        {
+                            for (var i = 0; i < Model.TopProductosNombres.Count && i < 6; i++)
+                            {
+                                var pct = totalTop > 0 ? Math.Round((decimal)Model.TopProductosCantidades[i] / totalTop * 100, 0) : 0;
+                                var colorProducto = coloresTop[i % coloresTop.Length];
+                                <div class="dash-product-row" style="--product-color:@colorProducto">
+                                    <span class="dash-product-dot" style="background:@colorProducto" aria-hidden="true"></span>
+                                    <div class="dash-product-name">
+                                        @Model.TopProductosNombres[i]
+                                        <span class="dash-product-share">
+                                            <span class="dash-product-percent">@pct%</span>
+                                            <span class="dash-product-track" aria-hidden="true"><span style="width:@pct.ToString(System.Globalization.CultureInfo.InvariantCulture)%"></span></span>
+                                        </span>
+                                    </div>
+                                    <span class="dash-product-quantity">@Model.TopProductosCantidades[i] u.</span>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="dash-empty">Aún no hay ventas para formar el Top 6.</div>
+                        }
+                    </div>
+                    <p class="visually-hidden">@string.Join("; ", Model.TopProductosNombres.Zip(Model.TopProductosCantidades, (name, quantity) => $"{name}: {quantity} unidades"))</p>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="mb-4" aria-label="Inventario que requiere atención">
+        <article class="dash-panel dash-stock @(totalAlertasStock > 0 ? "" : "is-clear")">
+            <header class="dash-stock-header">
+                <div class="dash-stock-heading">
+                    <span class="dash-stock-heading-icon"><i class="fas @(totalAlertasStock > 0 ? "fa-box-open" : "fa-check")" aria-hidden="true"></i></span>
+                    <div><h2 class="dash-stock-title">Inventario que requiere atención</h2><p class="dash-stock-subtitle">Prioridad calculada según las existencias actuales y el mínimo configurado.</p></div>
+                </div>
+                <span class="dash-stock-total"><i class="fas @(totalAlertasStock > 0 ? "fa-arrow-down-short-wide" : "fa-check")" aria-hidden="true"></i>@totalAlertasStock producto(s)</span>
+            </header>
+            @if (totalAlertasStock > 0)
+            {
+                <div class="dash-stock-list">
+                    @foreach (var producto in Model.ProductosStockBajo.Take(5))
+                    {
+                        var nivel = producto.StockMinimo > 0 ? Math.Clamp((decimal)producto.Stock / producto.StockMinimo * 100m, 0m, 100m) : 100m;
+                        var estado = producto.Stock <= 0 ? "is-out" : nivel <= 35 ? "is-critical" : nivel < 100 ? "is-low" : "is-limit";
+                        var textoEstado = producto.Stock <= 0 ? "Agotado" : nivel <= 35 ? "Muy bajo" : nivel < 100 ? "Bajo" : "En el mínimo";
+                        <article class="dash-stock-item @estado">
+                            <div class="dash-stock-product">
+                                <div class="dash-stock-name">@producto.Nombre</div>
+                                @if (!string.IsNullOrWhiteSpace(producto.CodigoBarras)) { <div class="dash-stock-code">Código @producto.CodigoBarras</div> }
+                            </div>
+                            <div class="dash-stock-level">
+                                <div class="dash-stock-level-copy"><span>Existencias</span><strong>@producto.Stock <span aria-hidden="true">/</span> @producto.StockMinimo mín.</strong></div>
+                                <div class="dash-stock-track" role="progressbar" aria-label="Nivel de existencias de @producto.Nombre" aria-valuemin="0" aria-valuemax="@producto.StockMinimo" aria-valuenow="@Math.Max(0, producto.Stock)"><span style="width:@nivel.ToString(System.Globalization.CultureInfo.InvariantCulture)%"></span></div>
+                            </div>
+                            <span class="dash-stock-state @estado">@textoEstado</span>
+                        </article>
+                    }
+                    @if (totalAlertasStock > 5) { <div class="dash-stock-more">Y @(totalAlertasStock - 5) producto(s) más por revisar.</div> }
+                </div>
+                <footer class="dash-stock-footer"><span>Los productos están ordenados desde el nivel de stock más bajo.</span>@if (User.IsInRole("Administrador")) { <a class="dash-text-link" asp-controller="Productos" asp-action="Index">Revisar inventario <i class="fas fa-arrow-right ms-1" aria-hidden="true"></i></a> }</footer>
+            }
+            else
+            {
+                <div class="dash-stock-empty" role="status"><span class="dash-stock-ok-icon"><i class="fas fa-check" aria-hidden="true"></i></span><div class="dash-stock-empty-copy"><strong>¡Todo en orden!</strong><span>Ningún producto está por debajo del stock mínimo.</span></div>@if (User.IsInRole("Administrador")) { <a class="dash-text-link" asp-controller="Productos" asp-action="Index">Ver inventario <i class="fas fa-arrow-right" aria-hidden="true"></i></a> }</div>
+            }
+        </article>
+    </section>
+
+    <section class="row g-4 mb-4 dash-performance-row" aria-label="Rendimiento mensual y del equipo">
+        <div class="col-xl-6">
+            <article class="dash-panel">
+                <header class="dash-panel-header">
+                    <div class="dash-heading">
+                        <h2 class="dash-panel-title"><span class="dash-title-icon"><i class="fas fa-scale-balanced" aria-hidden="true"></i></span>Comparativo mensual</h2>
+                        <span class="dash-panel-subtitle">Ventas actuales frente al mes anterior</span>
+                    </div>
+                    @if (crecimientoSube)
+                    {
+                        <span class="dash-change up"><i class="fas fa-arrow-trend-up" aria-hidden="true"></i>@Model.PorcentajeCrecimiento.ToString("N1")% más</span>
+                    }
+                    else if (crecimientoBaja)
+                    {
+                        <span class="dash-change down"><i class="fas fa-arrow-trend-down" aria-hidden="true"></i>@Math.Abs(Model.PorcentajeCrecimiento).ToString("N1")% menos</span>
+                    }
+                    else
+                    {
+                        <span class="dash-change flat">Sin variación</span>
+                    }
+                </header>
+                <div class="dash-panel-body">
+                    <div class="dash-month-grid">
+                        <div class="dash-month-card">
+                            <div class="dash-month-label">Este mes</div>
+                            <div class="dash-month-value">@moneda @Model.VentasMesActual.ToString("N2")</div>
+                            <div class="dash-month-bar" role="img" aria-label="Ventas del mes actual"><span style="width:@ventasActualWidth.ToString(System.Globalization.CultureInfo.InvariantCulture)%"></span></div>
+                        </div>
+                        <div class="dash-month-card previous">
+                            <div class="dash-month-label">Mes anterior</div>
+                            <div class="dash-month-value">@moneda @Model.VentasMesAnterior.ToString("N2")</div>
+                            <div class="dash-month-bar" role="img" aria-label="Ventas del mes anterior"><span style="width:@ventasAnteriorWidth.ToString(System.Globalization.CultureInfo.InvariantCulture)%"></span></div>
+                        </div>
+                    </div>
+                    <p class="dash-month-summary">@(crecimientoSube ? "Aumento" : crecimientoBaja ? "Disminución" : "Sin cambio") de <strong>@moneda @Math.Abs(diferenciaMensual).ToString("N2")</strong> respecto al mes anterior.</p>
+                </div>
+            </article>
+        </div>
+        <div class="col-xl-6">
+            <article class="dash-panel">
+                <header class="dash-panel-header">
+                    <div class="dash-heading">
+                        <h2 class="dash-panel-title"><span class="dash-title-icon"><i class="fas fa-users" aria-hidden="true"></i></span>Ventas por cajero</h2>
+                        <span class="dash-panel-subtitle">Participación en las ventas del mes actual</span>
+                    </div>
+                    <span class="dash-period">@Model.VentasPorCajero.Count personas</span>
+                </header>
+                <div class="dash-panel-body">
+                    <div class="dash-cashier-list">
+                        @if (Model.VentasPorCajero.Any())
+                        {
+                            foreach (var c in Model.VentasPorCajero.OrderByDescending(x => x.Value))
+                            {
+                                var pct = totalCajeros > 0 ? Math.Round(c.Value / totalCajeros * 100, 0) : 0;
+                                <div class="dash-cashier">
+                                    <div class="dash-cashier-row">
+                                        <span class="dash-cashier-icon"><i class="fas fa-user" aria-hidden="true"></i></span>
+                                        <div><div class="dash-cashier-name">@c.Key</div><div class="dash-cashier-share">@pct% de las ventas</div></div>
+                                        <span class="dash-cashier-total">@moneda @c.Value.ToString("N2")</span>
+                                    </div>
+                                    <div class="dash-cashier-track" role="img" aria-label="@pct% de las ventas del mes"><span style="width:@pct.ToString(System.Globalization.CultureInfo.InvariantCulture)%"></span></div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="dash-empty">Todavía no hay ventas este mes.</div>
+                        }
+                    </div>
+                </div>
+            </article>
+        </div>
+    </section>
+</main>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"></script>
+    <script>
+        (() => {
+            const themes = {
+                normal: { line:'#3563e9', top:'rgba(53,99,233,.24)', bottom:'rgba(53,99,233,.015)', text:'#56647b', grid:'#e2e8f2', surface:'#fff', slices:['#3563e9','#0c9b78','#16a3c7','#8968e8','#dc8a35','#d65378'] },
+                dark: { line:'#fcd34d', top:'rgba(252,211,77,.22)', bottom:'rgba(252,211,77,.015)', text:'#dfc98f', grid:'#594a2d', surface:'#17150f', slices:['#fcd34d','#9ce5c8','#70c6db','#c2a5ff','#ffc477','#ff9fb0'] },
+                soft: { line:'#303030', top:'rgba(48,48,48,.16)', bottom:'rgba(48,48,48,.01)', text:'#454545', grid:'#999', surface:'#fff', slices:['#303030','#505050','#707070','#909090','#b0b0b0','#c0c0c0'] }
+            };
+            const currency='@Html.Raw(System.Text.Encodings.Web.JavaScriptEncoder.Default.Encode(moneda))';
+            const dates=@Html.Raw(Json.Serialize(Model.FechasGrafico));
+            const sales=@Html.Raw(Json.Serialize(Model.VentasGrafico));
+            const productNames=@Html.Raw(Json.Serialize(Model.TopProductosNombres));
+            const productQuantities=@Html.Raw(Json.Serialize(Model.TopProductosCantidades));
+            const total=@totalTop;
+            const paddedSalesAxis=Math.max(1,...sales)*1.15;
+            const roughSalesStep=paddedSalesAxis/7;
+            const salesStepMagnitude=Math.pow(10,Math.floor(Math.log10(roughSalesStep)));
+            const normalizedSalesStep=roughSalesStep/salesStepMagnitude;
+            const niceSalesStep=(normalizedSalesStep<=1?1:normalizedSalesStep<=2?2:normalizedSalesStep<=5?5:10)*salesStepMagnitude;
+            const maxSalesAxis=Number((Math.ceil(paddedSalesAxis/niceSalesStep)*niceSalesStep).toPrecision(12));
+            const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+            const lineElement=document.getElementById('graficoVentas');
+            const donutElement=document.getElementById('graficoTop');
+            if(!window.echarts){
+                lineElement.textContent='No se pudo cargar el gráfico de ventas.';
+                donutElement.textContent='No se pudo cargar el gráfico de productos.';
+                return;
+            }
+            const lineChart=echarts.init(lineElement,null,{renderer:'canvas',devicePixelRatio:Math.min(window.devicePixelRatio||1,2),useDirtyRect:true});
+            const donutChart=echarts.init(donutElement,null,{renderer:'svg'});
+            let chartsVisible=false;
+
+            function renderCharts(){
+                const mode=document.body.classList.contains('contraste-oscuro')?'dark':document.body.classList.contains('contraste-suave')?'soft':'normal';
+                const theme=themes[mode];
+                const gradient=new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:theme.top},{offset:1,color:theme.bottom}]);
+                if(chartsVisible){
+                    lineChart.setOption({
+                        animation:true,animationDuration:1600,animationEasing:'cubicOut',
+                        grid:{left:12,right:22,top:20,bottom:18,containLabel:true},
+                        tooltip:{trigger:'axis',triggerOn:'mousemove|click',renderMode:'html',confine:true,showDelay:0,hideDelay:0,transitionDuration:0,axisPointer:{type:'line',snap:true,animation:false,animationDurationUpdate:0,lineStyle:{color:theme.line,type:'dashed',width:1}},backgroundColor:theme.surface,borderColor:theme.grid,textStyle:{color:theme.text},valueFormatter:value=>`${currency} ${Number(value).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})}`},
+                        xAxis:{type:'category',boundaryGap:false,data:dates,axisTick:{show:false},axisLine:{lineStyle:{color:theme.grid}},axisLabel:{color:theme.text,hideOverlap:true,margin:14}},
+                        yAxis:{type:'value',min:0,max:maxSalesAxis,splitNumber:7,axisLabel:{color:theme.text,formatter:value=>`${currency} ${Number(value).toFixed(2).replace(/\.00$/,'')}`,margin:12},axisLine:{show:false},axisTick:{show:false},splitLine:{lineStyle:{color:theme.grid,type:'dashed'}}},
+                        series:[{type:'line',smooth:.36,symbol:'circle',symbolSize:8,showSymbol:true,data:sales,lineStyle:{color:theme.line,width:3.5,cap:'round'},itemStyle:{color:theme.surface,borderColor:theme.line,borderWidth:3},areaStyle:{color:gradient},emphasis:{focus:'series',showSymbol:true,symbolSize:11}}]
+                    },true);
+
+                    const empty=!productNames.length;
+                    const donutData=empty?[{name:'Sin ventas',value:1,itemStyle:{color:theme.grid}}]:productNames.map((name,index)=>({name,value:productQuantities[index],itemStyle:{color:theme.slices[index%theme.slices.length]}}));
+                    donutChart.setOption({
+                        animation:true,animationDuration:1400,animationEasing:'cubicOut',
+                        tooltip:{show:!empty,trigger:'item',triggerOn:'mousemove|click',renderMode:'html',confine:true,showDelay:0,hideDelay:40,transitionDuration:0,backgroundColor:theme.surface,borderColor:theme.grid,textStyle:{color:theme.text},formatter:item=>`${escapeHtml(item.name)}<br><strong>${Number(item.value)} unidades</strong> · ${Number(item.percent)}%`},
+                        graphic:[{type:'text',left:'center',top:'42%',style:{text:String(total),fill:theme.text,font:'800 25px Outfit, sans-serif',textAlign:'center'}},{type:'text',left:'center',top:'57%',style:{text:'unidades',fill:theme.text,font:'12px Outfit, sans-serif',textAlign:'center'}}],
+                        series:[{type:'pie',radius:['60%','84%'],center:['50%','50%'],startAngle:90,clockwise:true,avoidLabelOverlap:true,silent:empty,itemStyle:{borderColor:theme.surface,borderWidth:4,borderRadius:4},emphasis:{scale:true,scaleSize:9,itemStyle:{borderColor:'transparent',borderWidth:0,shadowBlur:0}},label:{show:false},labelLine:{show:false},data:donutData,animationType:'expansion',animationEasing:'cubicOut'}]
+                    },true);
+                }
+                document.querySelectorAll('.dashboard-v4 .dash-product-dot').forEach((dot,index)=>dot.style.backgroundColor=theme.slices[index%theme.slices.length]);
+            }
+
+            const themeObserver=new MutationObserver(renderCharts);
+            themeObserver.observe(document.body,{attributes:true,attributeFilter:['class']});
+            let visibilityObserver=null;
+            if('IntersectionObserver' in window){
+                visibilityObserver=new IntersectionObserver(entries=>{
+                    if(entries.some(entry=>entry.isIntersecting)){
+                        chartsVisible=true;
+                        window.requestAnimationFrame(()=>renderCharts());
+                        visibilityObserver.disconnect();
+                    }
+                },{rootMargin:'80px 0px',threshold:.15});
+                visibilityObserver.observe(lineElement);
+            }else{
+                chartsVisible=true;
+                window.requestAnimationFrame(()=>renderCharts());
+            }
+            let lineSize={width:lineElement.clientWidth,height:lineElement.clientHeight};
+            let donutSize={width:donutElement.clientWidth,height:donutElement.clientHeight};
+            const resizeObserver=new ResizeObserver(entries=>{
+                for(const entry of entries){
+                    const size={width:entry.contentRect.width,height:entry.contentRect.height};
+                    if(entry.target===lineElement&&(Math.abs(size.width-lineSize.width)>1||Math.abs(size.height-lineSize.height)>1)){
+                        lineSize=size;
+                        lineChart.resize();
+                    }else if(entry.target===donutElement&&(Math.abs(size.width-donutSize.width)>1||Math.abs(size.height-donutSize.height)>1)){
+                        donutSize=size;
+                        donutChart.resize();
+                    }
+                }
+            });
+            resizeObserver.observe(lineElement);
+            resizeObserver.observe(donutElement);
+            window.addEventListener('pagehide',event=>{
+                if(event.persisted)return;
+                themeObserver.disconnect();
+                visibilityObserver?.disconnect();
+                resizeObserver.disconnect();
+                lineChart.dispose();
+                donutChart.dispose();
+            },{once:true});
+        })();
+    </script>
+}

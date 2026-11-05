@@ -1,0 +1,82 @@
+@model IEnumerable<MiniMarket.Web.Models.AperturaCaja>
+
+@{
+    ViewData["Title"] = "Historial de caja";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="text-primary"><i class="fas fa-history me-2"></i>Historial de caja</h2>
+        <p class="text-muted">@(User.IsInRole("Administrador") ? "Registro de todos los cierres de caja anteriores." : "Registro de tus cierres de caja anteriores.")</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i> Volver a Caja
+    </a>
+</div>
+
+<div class="card shadow border-0">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle" id="tablaArqueos">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Cajero</th>
+                        <th>Apertura</th>
+                        <th>Cierre</th>
+                        <th class="text-end">Monto Inicial</th>
+                        <th class="text-end">Total Ventas (Sistema)</th>
+                        <th class="text-end">Total Gastos (-)</th>
+                        <th class="text-end">Monto Declarado</th>
+                        <th class="text-end">Diferencia</th>
+                        <th class="text-end">Anulaciones posteriores</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        var esperado = item.MontoInicial + (item.VentasEfectivo ?? item.TotalVentas) - item.TotalGastos;
+                        var diferencia = (item.MontoCierre ?? 0) - esperado;
+                        var claseDif = diferencia >= 0 ? "text-success" : "text-danger";
+                        var iconDif = diferencia >= 0 ? "fa-check-circle" : "fa-exclamation-circle";
+
+                        <tr>
+                            <td><i class="fas fa-user me-1 text-muted"></i> @item.UsuarioId</td>
+                            <td>@item.FechaApertura.ToString("dd/MM/yyyy HH:mm")</td>
+                            <td>@(item.FechaCierre.HasValue ? item.FechaCierre.Value.ToString("dd/MM/yyyy HH:mm") : "-")</td>
+                            <td class="text-end">S/. @item.MontoInicial.ToString("N2")</td>
+                            <td class="text-end fw-bold text-success">S/. @item.TotalVentas.ToString("N2")</td>
+                            <td class="text-end text-danger">- S/. @item.TotalGastos.ToString("N2")</td>
+                            <td class="text-end">S/. @((item.MontoCierre ?? 0).ToString("N2"))</td>
+                            <td class="text-end fw-bold @claseDif">
+                                <i class="fas @iconDif me-1"></i>
+                                S/. @diferencia.ToString("N2")
+                            </td>
+                            <td class="text-end text-warning" title="Ajuste informativo pendiente de conciliación; no modifica el cierre ni representa una devolución automática.">S/. @item.AjustesAnulaciones.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot class="table-light fw-bold">
+                    <tr>
+                        <td colspan="4" class="text-end">TOTALES:</td>
+                        <td class="text-end text-success">S/. @Model.Sum(x => x.TotalVentas).ToString("N2")</td>
+                        <td class="text-end text-danger">- S/. @Model.Sum(x => x.TotalGastos).ToString("N2")</td>
+                        <td class="text-end">S/. @Model.Sum(x => x.MontoCierre ?? 0).ToString("N2")</td>
+                        <td class="text-end">-</td>
+                        <td class="text-end">S/. @Model.Sum(x => x.AjustesAnulaciones).ToString("N2")</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('#tablaArqueos').DataTable({
+                "order": [[ 2, "desc" ]],
+                language: { url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json' }
+            });
+        });
+    </script>
+}

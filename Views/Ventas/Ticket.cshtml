@@ -1,0 +1,179 @@
+@model MiniMarket.Web.Models.Venta
+
+@{
+    Layout = null;
+    var empresa = ViewBag.Configuracion as MiniMarket.Web.Models.Configuracion;
+    var comprobante = ViewBag.ComprobanteFiscal as MiniMarket.Web.Models.ComprobanteFiscal;
+    var tipoComprobante = comprobante?.Tipo == "01" || (comprobante == null && Model.Cliente?.Documento?.Trim().Length == 11)
+        ? "Factura" : "Boleta";
+    var comprobanteProduccion = comprobante?.Ambiente == "Produccion" && comprobante.Estado == "Aceptada Producción";
+    var comprobanteQa = comprobante?.Ambiente == "QA" && comprobante.Estado == "Aceptada QA";
+    var igvPct = empresa?.IgvPorcentaje ?? 18m;
+    // El recargo ya está incluido en Total; el desglose previo al recargo
+    // corresponde solo a los productos netos (después del descuento).
+    var totalProductos = Model.Detalles.Sum(item => item.SubTotal);
+    var netoProductos = totalProductos - Model.Descuento;
+    var recargoTarjeta = Model.MetodoPago == "Tarjeta" ? Model.Total - netoProductos : 0m;
+    var baseProductos = decimal.Round(netoProductos / (1 + igvPct / 100m), 2, MidpointRounding.AwayFromZero);
+    var igvProductos = netoProductos - baseProductos;
+    var nombreCliente = Model.Cliente?.Nombre?.Trim() ?? "Público General";
+    // Registros antiguos de DNI pueden venir como "APELLIDOS, NOMBRES".
+    // No se reordenan razones sociales de RUC ni nombres que ya estén sin coma.
+    if (Model.Cliente?.Documento?.Trim().Length != 11)
+    {
+        var partesCliente = nombreCliente.Split(',', 2, StringSplitOptions.TrimEntries);
+        if (partesCliente.Length == 2 && partesCliente.All(parte => !string.IsNullOrWhiteSpace(parte)))
+            nombreCliente = $"{partesCliente[1]} {partesCliente[0]}";
+    }
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>Ticket #@Model.Id.ToString("D5")</title>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            width: 80mm;
+            margin: 0 auto;
+            padding: 5px;
+            color: #000;
+            font-size: 12px;
+        }
+        .centrado { text-align: center; }
+        .derecha { text-align: right; }
+        .linea { border-top: 1px dashed #000; margin: 5px 0; }
+        table { width: 100%; border-collapse: collapse; }
+        td, th { padding: 2px 0; vertical-align: top; }
+
+        @@media print {
+            .no-print { display: none; }
+        }
+
+        .btn-imprimir {
+            background-color: #0d6efd; color: white; border: none;
+            padding: 10px 20px; border-radius: 5px; cursor: pointer;
+            width: 100%; margin-bottom: 10px; font-weight: bold;
+        }
+        .marca { font-size: 16px; font-weight: bold; margin-bottom: 2px; text-transform: uppercase; }
+        .anulado-banner { background: #dc3545; color: white; text-align: center; font-weight: bold; padding: 4px; margin: 5px 0; letter-spacing: 2px; }
+    </style>
+</head>
+<body>
+
+    <div class="no-print">
+        <button onclick="window.print()" class="btn-imprimir">🖨 IMPRIMIR</button>
+    </div>
+
+    @if (Model.Estado == "Anulada")
+    {
+        <div class="anulado-banner">⚠ VENTA ANULADA ⚠</div>
+    }
+
+    <div class="centrado">
+        @if (empresa != null)
+        {
+            <div class="marca">@empresa.NombreEmpresa</div>
+            <div>RUC: @empresa.Ruc</div>
+            <div>@empresa.Direccion</div>
+            @if (!string.IsNullOrEmpty(empresa.Telefono)) { <div>Tel: @empresa.Telefono</div> }
+        }
+        else
+        {
+            <div class="marca">MINIMARKET</div>
+            <div>(Datos no configurados)</div>
+        }
+        <div class="linea"></div>
+    </div>
+
+    <div>
+        <strong>Ticket:</strong> #@Model.Id.ToString("D6")<br />
+        <strong>Fecha:</strong> @Model.Fecha.ToString("dd/MM/yyyy HH:mm")<br />
+        <strong>Cajero:</strong> @ViewBag.NombreCajero<br />
+        <strong>Cliente:</strong> @nombreCliente<br />
+        <strong>Pago:</strong> @(Model.MetodoPago ?? "Efectivo")<br />
+        @if (comprobanteProduccion || comprobanteQa)
+        {
+            <div><strong>@(comprobanteProduccion ? "Comprobante" : "Comprobante QA (sin validez tributaria)"):</strong> @(comprobante.Serie)-@(comprobante.Correlativo.ToString("D8"))</div>
+        }
+        else
+        {
+            <div><strong>Comprobante previsto:</strong> @(tipoComprobante)</div>
+            <div><strong>Emisión:</strong> @(comprobante?.Estado ?? Model.EstadoEmision)</div>
+        }
+    </div>
+
+    <div class="linea"></div>
+
+    <table>
+        <thead>
+            <tr style="text-align:left;">
+                <th style="width:50%">Prod.</th>
+                <th style="width:10%">Cant.</th>
+                <th style="width:20%" class="derecha">P.U.</th>
+                <th style="width:20%" class="derecha">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.Detalles)
+            {
+                <tr>
+                    <td>@item.Producto.Nombre</td>
+                    <td style="text-align:center;">@item.Cantidad</td>
+                    <td class="derecha">@item.PrecioUnitario.ToString("N2")</td>
+                    <td class="derecha">@item.SubTotal.ToString("N2")</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    <div class="linea"></div>
+
+    <table style="font-size: 12px;">
+        <tr>
+            <td>Subtotal productos:</td>
+            <td class="derecha">@(empresa?.MonedaSimbolo ?? "S/.") @totalProductos.ToString("N2")</td>
+        </tr>
+        @if (Model.Descuento > 0)
+        {
+            <tr>
+                <td>Descuento:</td>
+                <td class="derecha fw-bold">- @(empresa?.MonedaSimbolo ?? "S/.") @Model.Descuento.ToString("N2")</td>
+            </tr>
+        }
+        <tr>
+            <td>Base gravada productos:</td>
+            <td class="derecha">@(empresa?.MonedaSimbolo ?? "S/.") @baseProductos.ToString("N2")</td>
+        </tr>
+        <tr>
+            <td>IGV productos (@igvPct%):</td>
+            <td class="derecha">@(empresa?.MonedaSimbolo ?? "S/.") @igvProductos.ToString("N2")</td>
+        </tr>
+        @if (Model.MetodoPago == "Tarjeta")
+        {
+            <tr>
+                <td>Recargo tarjeta (5%):</td>
+                <td class="derecha">+ @(empresa?.MonedaSimbolo ?? "S/.") @recargoTarjeta.ToString("N2")</td>
+            </tr>
+        }
+    </table>
+
+    <div class="linea"></div>
+
+    <table style="font-size: 15px; font-weight: bold;">
+        <tr>
+            <td>TOTAL:</td>
+            <td class="derecha">@(empresa?.MonedaSimbolo ?? "S/.") @Model.Total.ToString("N2")</td>
+        </tr>
+    </table>
+
+    <div class="linea"></div>
+
+    <div class="centrado">
+        <br />
+        ¡GRACIAS POR SU COMPRA!
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,77 @@
+@model MiniMarket.Web.Models.Cliente
+
+@{
+    ViewData["Title"] = "Nuevo Cliente";
+}
+
+<link rel="stylesheet" href="~/css/clientes.css" asp-append-version="true" />
+
+<main class="clientes-page clientes-form-page">
+    <header class="clientes-heading">
+        <div>
+            <span class="clientes-eyebrow">DIRECTORIO DE CLIENTES</span>
+            <h1><i class="fas fa-user-plus" aria-hidden="true"></i>Nuevo cliente</h1>
+            <p>Registra los datos de contacto del nuevo cliente.</p>
+        </div>
+        <a asp-action="Index" class="btn clientes-secondary-action"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>Volver al directorio</span></a>
+    </header>
+
+    <section class="clientes-form-card">
+        <header class="clientes-form-card-header">
+            <div><span class="clientes-form-step">01</span><div><h2>Información del cliente</h2><p>Los campos marcados como obligatorios deben completarse.</p></div></div>
+            <span class="clientes-required-note"><i class="fas fa-asterisk" aria-hidden="true"></i> Campo obligatorio</span>
+        </header>
+
+        <form asp-action="Create" method="post" class="clientes-form">
+            <div asp-validation-summary="ModelOnly" class="clientes-validation-summary" role="alert"></div>
+
+            <div class="clientes-form-grid">
+                <div class="clientes-field clientes-document-field">
+                    <label asp-for="Documento" class="form-label">Documento <span>DNI / RUC</span><b aria-hidden="true">*</b></label>
+                    <div class="clientes-document-input">
+                        <input asp-for="Documento" class="form-control" placeholder="Ingresa 8 dígitos para DNI o 11 para RUC" maxlength="11" inputmode="numeric" pattern="[0-9]{8}([0-9]{3})?" autocomplete="off" />
+                        <button class="btn clientes-lookup-btn" type="button" id="btnConsultarDocumento" data-consulta-url="@Url.Action("ConsultarDocumento", "Clientes")">
+                            <i class="fas fa-magnifying-glass" aria-hidden="true"></i><span>Consultar DNI/RUC</span>
+                        </button>
+                    </div>
+                    <small id="consultaDocumentoMensaje" class="clientes-help" role="status" aria-live="polite">La consulta es opcional; también puedes completar los datos manualmente.</small>
+                    <span asp-validation-for="Documento" class="clientes-field-error"></span>
+                </div>
+
+                <div class="clientes-field clientes-name-field">
+                    <label asp-for="Nombre" class="form-label">Nombre / razón social <b aria-hidden="true">*</b></label>
+                    <input asp-for="Nombre" class="form-control" placeholder="Nombre completo o razón social" autocomplete="name" />
+                    <span asp-validation-for="Nombre" class="clientes-field-error"></span>
+                </div>
+
+                <div class="clientes-field">
+                    <label asp-for="Telefono" class="form-label">Teléfono</label>
+                    <input asp-for="Telefono" class="form-control" placeholder="Número de contacto" inputmode="tel" autocomplete="tel" />
+                    <span asp-validation-for="Telefono" class="clientes-field-error"></span>
+                </div>
+
+                <div class="clientes-field">
+                    <label asp-for="Correo" class="form-label">Correo electrónico</label>
+                    <input asp-for="Correo" class="form-control" type="email" placeholder="nombre@correo.com" autocomplete="email" />
+                    <span asp-validation-for="Correo" class="clientes-field-error"></span>
+                </div>
+
+                <div class="clientes-field clientes-address-field">
+                    <label asp-for="Direccion" class="form-label">Dirección</label>
+                    <textarea asp-for="Direccion" class="form-control" rows="3" placeholder="Dirección del cliente" autocomplete="street-address"></textarea>
+                    <span asp-validation-for="Direccion" class="clientes-field-error"></span>
+                </div>
+            </div>
+
+            <footer class="clientes-form-actions">
+                <a asp-action="Index" class="btn clientes-secondary-action">Cancelar</a>
+                <button type="submit" class="btn clientes-primary-action"><i class="fas fa-check" aria-hidden="true"></i><span>Guardar cliente</span></button>
+            </footer>
+        </form>
+    </section>
+</main>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    <script src="~/js/clientes-documento.js" asp-append-version="true"></script>
+}

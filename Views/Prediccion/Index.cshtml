@@ -1,0 +1,129 @@
+@model IEnumerable<MiniMarket.Web.Models.ViewModels.PrediccionViewModel>
+
+@{
+    ViewData["Title"] = "Predicción de Demanda";
+}
+
+<div class="container-fluid py-4">
+    <div class="amaya-page-heading">
+        <div>
+            <h2 class="fw-bold mb-0"><i class="fas fa-chart-line amaya-title-icon"></i>Predicción y Sugerencia de Reabastecimiento</h2>
+            <p class="text-muted mb-0">Estimación de demanda para los próximos 7 días basada en rotación histórica.</p>
+        </div>
+        <button class="btn amaya-secondary-action" onclick="window.print()">
+            <i class="fas fa-print me-1"></i> Imprimir Lista de Pedidos
+        </button>
+    </div>
+
+    <!-- Resumen Superior -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Productos Críticos / Por Agotarse</h6>
+                    <h3 class="fw-bold text-danger mb-0">@Model.Count(m => m.EstadoStock == "Crítico")</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Unidades Sugeridas a Comprar</h6>
+                    <h3 class="fw-bold text-warning mb-0">@Model.Sum(m => m.CantidadSugeridaComprar) u.</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted mb-1">Presupuesto Estimado de Compra</h6>
+                    <h3 class="fw-bold text-success mb-0">S/. @Model.Sum(m => m.InversionEstimada).ToString("N2")</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Estimaciones con Botón de Acción -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header amaya-card-header">
+            <h5 class="mb-0"><i class="fas fa-clipboard-list me-2"></i>Lista sugerida de reposición</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Producto</th>
+                            <th>Categoría</th>
+                            <th class="text-center">Stock Actual</th>
+                            <th class="text-center">Venta Diaria Prom.</th>
+                            <th class="text-center">Demanda (7 Días)</th>
+                            <th class="text-center">Sugerido a Reponer</th>
+                            <th>Inversión Estimada</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@item.ProductoNombre</strong><br />
+                                    <small class="text-muted">Cód: @item.CodigoBarras</small>
+                                </td>
+                                <td><span class="badge bg-secondary">@item.CategoriaNombre</span></td>
+                                <td class="text-center font-monospace">@item.StockActual</td>
+                                <td class="text-center">@item.PromedioVentaDiaria u/día</td>
+                                <td class="text-center fw-bold">@item.DemandaEstimada7Dias u.</td>
+                                <td class="text-center">
+                                    @if (item.CantidadSugeridaComprar > 0)
+                                    {
+                                        <span class="badge bg-danger fs-6">+@item.CantidadSugeridaComprar u.</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-light text-muted">Stock Cubierto</span>
+                                    }
+                                </td>
+                                <td class="fw-bold text-success">S/. @item.InversionEstimada.ToString("N2")</td>
+                                <td class="text-center">
+                                    @if (item.EstadoStock == "Crítico")
+                                    {
+                                        <span class="badge bg-danger">Crítico</span>
+                                    }
+                                    else if (item.EstadoStock == "Bajo")
+                                    {
+                                        <span class="badge bg-warning text-dark">Stock Bajo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">Óptimo</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (item.CantidadSugeridaComprar > 0)
+                                    {
+                                        <a asp-controller="Compras" 
+                                           asp-action="Create" 
+                                           asp-route-productoId="@item.ProductoId" 
+                                           asp-route-cantidad="@item.CantidadSugeridaComprar"
+                                           class="btn btn-sm btn-primary">
+                                            <i class="fas fa-cart-plus me-1"></i> Comprar
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary" disabled>
+                                            <i class="fas fa-check me-1"></i> Al día
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

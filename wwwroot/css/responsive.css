@@ -1,0 +1,71 @@
+/* Keep flex children within the available space beside the desktop navigation. */
+.main-content { flex: 1 1 0; min-width: 0; }
+.main-content .row > *, .main-content .card, .main-content .card-body { min-width: 0; }
+.sidebar.offcanvas-lg { flex-shrink: 0; background-color: var(--sidebar-bg) !important; }
+.table-responsive { max-width: 100%; -webkit-overflow-scrolling: touch; }
+.input-group > .select2-container { flex: 1 1 0; width: 1% !important; min-width: 0; }
+.select2-container { max-width: 100%; }
+#ai-user-input { min-width: 0; }
+#ai-chat-messages { overflow-wrap: anywhere; }
+.caja-acciones > .btn { display: inline-flex; align-items: center; justify-content: center; }
+@media (max-width: 575.98px) {
+    .caja-acciones > .btn { width: 100%; }
+}
+.main-content .text-info { color: #087990 !important; }
+.main-content .text-warning { color: #856404 !important; }
+body.contraste-oscuro .main-content .text-info,
+body.contraste-oscuro .main-content .text-warning { color: #fcd34d !important; }
+
+@media (max-width: 991.98px) {
+    .sidebar.offcanvas-lg {
+        z-index: 1045;
+        width: min(280px, 85vw);
+        min-width: 0;
+        max-width: none;
+        min-height: 0;
+        height: 100dvh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        transition: transform .3s ease-in-out;
+    }
+    .main-content { padding: 12px; }
+    .navbar-top { padding: 10px 12px; gap: 10px; margin-bottom: 18px; }
+    .navbar-top > .me-3 { margin-right: 0 !important; }
+    .navbar-top #userMenu .fw-bold { max-width: 220px; overflow-wrap: anywhere; }
+}
+
+@media (max-width: 767.98px) {
+    .main-content { padding-bottom: 85px; }
+    .main-content .container-fluid { padding-left: 0; padding-right: 0; }
+    .main-content .card-body { padding: 1rem; }
+    .main-content .card-header.d-flex,
+    .main-content .list-group-item.d-flex,
+    .main-content .container-fluid > .d-flex.justify-content-between,
+    .dataTables_wrapper .d-flex.justify-content-between { flex-wrap: wrap; gap: 12px; }
+    .main-content h2 { font-size: 1.5rem; }
+    .main-content .card-kpi h2 { font-size: clamp(1.5rem, 6vw, 2.2rem); overflow-wrap: anywhere; }
+    .main-content .card-kpi { padding: 1.25rem !important; }
+    .form-control, .form-select, .select2-search__field { font-size: 16px !important; }
+    .btn { min-height: 40px; }
+    .dataTables_wrapper .dataTables_filter { text-align: left; }
+    .dataTables_wrapper .dataTables_filter label { white-space: normal; }
+    .dataTables_wrapper .dataTables_filter input { max-width: 100%; margin-left: 0; }
+    .dataTables_wrapper .pagination { flex-wrap: wrap; gap: 3px; }
+    .dataTables_wrapper .dt-buttons { display: flex; flex-wrap: wrap; gap: 4px; }
+    #accessibility-panel {
+        position: fixed !important;
+        top: 80px !important;
+        right: 12px !important;
+        width: calc(100vw - 24px) !important;
+        max-width: 380px;
+        max-height: calc(100dvh - 100px);
+        overflow-y: auto !important;
+    }
+    #ai-chat-widget { right: 12px !important; bottom: 12px !important; }
+    #ai-chat-box { width: min(360px, calc(100vw - 24px)) !important; max-height: calc(100dvh - 100px); overflow-y: auto !important; }
+    #ai-chat-messages { height: min(250px, 40dvh) !important; }
+}
+
+@media (hover: none) {
+    .custom-cursor-dot, .custom-cursor-halo { display: none !important; }
+}

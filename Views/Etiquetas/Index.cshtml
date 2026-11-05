@@ -1,0 +1,239 @@
+@{
+    ViewData["Title"] = "Panel de Etiquetado / Barras";
+}
+
+<div class="amaya-page-heading">
+    <div>
+        <h2 class="fw-bold mb-0">
+            <i class="fas fa-barcode amaya-title-icon"></i>Generador de Viñetas
+        </h2>
+        <p class="text-muted">Diseñador y exportador de códigos de barras (CODE128) para las góndolas y estanterías.</p>
+    </div>
+</div>
+
+@if (TempData["MensajeError"] != null)
+{
+    <div class="alert alert-danger shadow-sm alert-dismissible fade show">
+        <i class="fas fa-exclamation-triangle me-2"></i> @TempData["MensajeError"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row">
+    <!-- SECCIÓN DE SELECCIÓN -->
+    <div class="col-md-5 mb-4">
+        <div class="card shadow-sm border-0">
+            <div class="card-header amaya-card-header pt-3 pb-2">
+                <h5 class="fw-bold text-dark"><i class="fas fa-search me-2"></i>Buscar Producto</h5>
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-3">Busca el elemento de tu inventario usando nombre, código sku original o marca. Luego añádelo a la cola pautando las copias.</p>
+                <div class="mb-3">
+                    <label class="form-label text-muted fw-bold small">CATÁLOGO:</label>
+                    <select id="cboProducto" class="form-control w-100"></select>
+                </div>
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <label class="form-label text-muted fw-bold small">PRECIO ACTUAL:</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">S/.</span>
+                            <input type="text" id="txtPrecio" class="form-control bg-white border-start-0 text-primary fw-bold" readonly placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label text-muted fw-bold small">COPIAS A IMPRIMIR:</label>
+                        <input type="number" id="txtCopias" class="form-control" value="10" min="1" max="500">
+                    </div>
+                </div>
+                <!-- Almacenamos el código de barras y nombre para la tabla internamente -->
+                <input type="hidden" id="txtCodigoBarras" />
+                <input type="hidden" id="txtNombreProducto" />
+                <input type="hidden" id="txtProductoId" />
+                
+                <div class="d-grid mt-4">
+                    <button type="button" id="btnAgregar" class="btn btn-primary shadow-sm" disabled>
+                        <i class="fas fa-plus-circle me-1"></i> AÑADIR A LA LISTA
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN DE COLA Y PREVISUALIZACIÓN -->
+    <div class="col-md-7">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header amaya-card-header d-flex justify-content-between align-items-center pt-3 pb-2 border-0">
+                <h5 class="fw-bold text-dark mb-0"><i class="fas fa-layer-group me-2"></i>Cola de Impresión</h5>
+                <span class="badge bg-secondary" id="lblTotalLotes">0 items</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 400px;">
+                    <table class="table table-hover align-middle mb-0" id="tablaCola">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th class="ps-3 border-0 text-muted small">PRODUCTO / IDENTIFICADOR</th>
+                                <th class="text-center border-0 text-muted small">COPIAS</th>
+                                <th class="text-center border-0 text-muted small" style="width: 80px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Se llena dinámicamente -->
+                            <tr id="filaVacia">
+                                <td colspan="3" class="text-center py-5 text-muted">
+                                    <i class="fas fa-box-open fa-3x mb-3 amaya-muted-icon"></i><br>
+                                    La lista está vacía actualmente.<br><small>Añade ítems usando el panel de la izquierda.</small>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white border-top-0 d-flex justify-content-between align-items-center py-3">
+                <small class="text-muted"><i class="fas fa-info-circle me-1"></i>Asegura los rodillos A4 o térmicos antes de pulsar.</small>
+                
+                <!-- Formulario invisible que portará los datos para convertirlos a Etiquetas -->
+                <form id="formImpresion" method="post" action="@Url.Action("Imprimir", "Etiquetas")" target="_blank">
+                    <input type="hidden" name="jsonEtiquetas" id="jsonEtiquetas" />
+                    <button type="button" id="btnProcesarImpresion" class="btn amaya-primary-action shadow-sm px-4">
+                        <i class="fas fa-print me-2"></i> GENERAR E IMPRIMIR
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var _listaEtiquetas = [];
+
+        $(document).ready(function () {
+            // Inicializamos Select2
+            $('#cboProducto').select2({
+                placeholder: "Ingresa nombre o sku...",
+                ajax: {
+                    url: '@Url.Action("BuscarProductos", "Ventas")',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function (params) {
+                        return { term: params.term };
+                    },
+                    processResults: function (data) {
+                        return { results: data.results };
+                    }
+                }
+            });
+
+            // Cuando un producto es escogido en Select2
+            $('#cboProducto').on('select2:select', function (e) {
+                var data = e.params.data;
+                
+                // data trae: id, nombre, codigo, precio
+                $('#txtProductoId').val(data.id);
+                $('#txtNombreProducto').val(data.nombre);
+                $('#txtCodigoBarras').val(data.codigo);
+                $('#txtPrecio').val(parseFloat(data.precio).toFixed(2));
+                
+                $('#btnAgregar').prop('disabled', false);
+            });
+
+            // Al darle Añadir
+            $('#btnAgregar').click(function() {
+                var id = $('#txtProductoId').val();
+                var nombre = $('#txtNombreProducto').val();
+                var codigo = $('#txtCodigoBarras').val();
+                var precio = $('#txtPrecio').val();
+                var cantidad = parseInt($('#txtCopias').val());
+
+                if(!id || cantidad <= 0 || !codigo) {
+                    Swal.fire('Atención', 'Seleccione un producto válido con código de barras y determine la cantidad.', 'warning');
+                    return;
+                }
+
+                // Verificar si ya existe en la lista para solo sumarle
+                var existe = _listaEtiquetas.find(x => x.ProductoId == id);
+                if(existe) {
+                    existe.Cantidad += cantidad;
+                } else {
+                    _listaEtiquetas.push({
+                        ProductoId: parseInt(id),
+                        Nombre: nombre,
+                        Codigo: codigo,
+                        Precio: parseFloat(precio),
+                        Cantidad: cantidad
+                    });
+                }
+
+                actualizarTabla();
+                
+                // Limpiar campos
+                $('#cboProducto').val(null).trigger('change');
+                $('#txtProductoId').val('');
+                $('#txtPrecio').val('');
+                $('#txtCopias').val('10');
+                $('#btnAgregar').prop('disabled', true);
+            });
+
+            // Generar Impresión (Submit form)
+            $('#btnProcesarImpresion').click(function() {
+                if(_listaEtiquetas.length === 0) {
+                    Swal.fire('Atención', 'La lista de impresión está vacía.', 'warning');
+                    return;
+                }
+
+                // Convertir a JSON String y colocarlo en el input oculto del Form
+                $('#jsonEtiquetas').val(JSON.stringify(_listaEtiquetas));
+                
+                // Hacer submit de la petición en una nueva ventana
+                $('#formImpresion').submit();
+            });
+        });
+
+        function actualizarTabla() {
+            var tbody = $('#tablaCola tbody');
+            tbody.empty();
+
+            if (_listaEtiquetas.length === 0) {
+                tbody.append(`
+                    <tr id="filaVacia">
+                        <td colspan="3" class="text-center py-5 text-muted">
+                            <i class="fas fa-box-open fa-3x mb-3 text-light"></i><br>
+                            La lista está vacía actualmente.<br><small>Añade ítems usando el panel de la izquierda.</small>
+                        </td>
+                    </tr>
+                `);
+                $('#lblTotalLotes').text('0 items');
+                return;
+            }
+
+            var totalItems = 0;
+            _listaEtiquetas.forEach(function(item, index) {
+                totalItems += item.Cantidad;
+                var nombreSeguro = $('<div>').text(item.Nombre).html();
+                var codigoSeguro = $('<div>').text(item.Codigo).html();
+                tbody.append(`
+                    <tr>
+                        <td class="ps-3">
+                            <div class="fw-bold">${nombreSeguro}</div>
+                            <small class="text-muted"><i class="fas fa-barcode me-1"></i>${codigoSeguro}</small>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-secondary rounded-pill px-3 py-2 fs-6">${item.Cantidad} vts</span>
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarFila(${item.ProductoId})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `);
+            });
+            $('#lblTotalLotes').text(totalItems + ' viñetas a imprimir');
+        }
+
+        function eliminarFila(id) {
+            _listaEtiquetas = _listaEtiquetas.filter(x => x.ProductoId != id);
+            actualizarTabla();
+        }
+    </script>
+}

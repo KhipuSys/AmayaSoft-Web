@@ -1,0 +1,73 @@
+@model MiniMarket.Web.Models.Compra
+
+@{
+    ViewData["Title"] = "Detalle de Compra";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="text-primary"><i class="fas fa-info-circle me-2"></i>Detalle de Compra</h2>
+    <a asp-action="Index" class="btn btn-secondary"><i class="fas fa-arrow-left me-2"></i>Volver</a>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card shadow border-0 mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Información General</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-5 text-muted">Documento:</dt>
+                    <dd class="col-sm-7 fw-bold">@Model.NumeroDocumento</dd>
+
+                    <dt class="col-sm-5 text-muted">Fecha:</dt>
+                    <dd class="col-sm-7">@Model.Fecha.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                    <dt class="col-sm-5 text-muted">Proveedor:</dt>
+                    <dd class="col-sm-7">@(Model.Proveedor?.RazonSocial ?? "Desconocido")</dd>
+                    
+                    <dt class="col-sm-5 text-muted">Responsable:</dt>
+                    <dd class="col-sm-7">@(Model.Usuario?.UserName ?? "Sistema")</dd>
+
+                    <dt class="col-sm-5 text-muted">Total:</dt>
+                    <dd class="col-sm-7 fw-bold text-success">S/. @Model.Total.ToString("N2")</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow border-0">
+            <div class="card-header bg-white">
+                <h5 class="mb-0 text-primary">Productos Adquiridos</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Producto</th>
+                                <th class="text-center">Cantidad</th>
+                                <th class="text-end">Costo Unit.</th>
+                                <th class="text-end">SubTotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Detalles)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="fw-bold">@item.Producto.Nombre</span>
+                                    </td>
+                                    <td class="text-center">@item.Cantidad</td>
+                                    <td class="text-end">S/. @item.PrecioUnitario.ToString("N2")</td>
+                                    <td class="text-end fw-bold">S/. @item.Total.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

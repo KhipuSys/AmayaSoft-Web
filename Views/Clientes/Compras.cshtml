@@ -1,0 +1,113 @@
+@model IEnumerable<MiniMarket.Web.Models.Venta>
+
+@{
+    var cliente = ViewBag.Cliente as MiniMarket.Web.Models.Cliente;
+    ViewData["Title"] = $"Historial de Compras — {cliente?.Nombre}";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="text-primary"><i class="fas fa-shopping-bag me-2"></i>Historial de Compras</h2>
+        @if (cliente != null)
+        {
+            <p class="text-muted mb-0">Cliente: <strong>@cliente.Nombre</strong> | Doc: <strong>@cliente.Documento</strong></p>
+        }
+    </div>
+    <a asp-controller="Clientes" asp-action="Index" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i> Volver a Clientes
+    </a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info text-center p-5">
+        <i class="fas fa-inbox fa-3x mb-3 d-block opacity-50"></i>
+        <h5>Este cliente no tiene compras registradas.</h5>
+    </div>
+}
+else
+{
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm text-center p-3">
+                <div class="text-muted small fw-bold">TOTAL COMPRAS</div>
+                <div class="fs-3 fw-bold text-primary">@Model.Count()</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm text-center p-3">
+                <div class="text-muted small fw-bold">MONTO TOTAL GASTADO</div>
+                <div class="fs-3 fw-bold text-success">S/. @Model.Where(v => v.Estado == "Activa").Sum(v => v.Total).ToString("N2")</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm text-center p-3">
+                <div class="text-muted small fw-bold">ÚLTIMA COMPRA</div>
+                <div class="fs-5 fw-bold text-dark">@Model.Max(v => v.Fecha).ToString("dd/MM/yyyy")</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow border-0">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle" id="tablaComprasCliente">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Ticket</th>
+                            <th>Fecha</th>
+                            <th>Productos</th>
+                            <th>Método Pago</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr class="@(item.Estado == "Anulada" ? "table-danger opacity-75" : "")">
+                                <td class="fw-bold">#@item.Id.ToString("D5")</td>
+                                <td>@item.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td><span class="badge bg-secondary">@item.Detalles.Count item(s)</span></td>
+                                <td>@(item.MetodoPago ?? "Efectivo")</td>
+                                <td class="text-end fw-bold @(item.Estado == "Anulada" ? "text-danger text-decoration-line-through" : "text-success")">
+                                    S/. @item.Total.ToString("N2")
+                                </td>
+                                <td class="text-center">
+                                    @if (item.Estado == "Anulada")
+                                    {
+                                        <span class="badge bg-danger">Anulada</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">Activa</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <a asp-controller="Ventas" asp-action="Ticket" asp-route-id="@item.Id"
+                                       target="_blank" class="btn btn-sm btn-outline-secondary" title="Ver Ticket">
+                                        <i class="fas fa-print"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            if ($('#tablaComprasCliente').length) {
+                $('#tablaComprasCliente').DataTable({
+                    "order": [[ 0, "desc" ]],
+                    language: { url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json' }
+                });
+            }
+        });
+    </script>
+}

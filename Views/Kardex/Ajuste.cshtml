@@ -1,0 +1,127 @@
+@{
+    ViewData["Title"] = "Ajuste Manual de Inventario";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="text-primary"><i class="fas fa-sliders-h me-2"></i>Ajuste Manual de Inventario</h2>
+        <p class="text-muted">Corrige el stock por mermas, pérdidas o errores de conteo.</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Volver al Kardex
+    </a>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i> @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-7">
+        <div class="card shadow border-0">
+            <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Este ajuste modifica el stock real del producto</h6>
+            </div>
+            <div class="card-body p-4">
+                <form asp-action="Ajuste" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Producto <span class="text-danger">*</span></label>
+                        <select name="productoId" id="cboProducto" class="form-select" required>
+                            <option value="">-- Seleccione un producto --</option>
+                            @if (ViewBag.Productos != null)
+                            {
+                                @foreach (var item in ViewBag.Productos as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>)
+                                {
+                                    <option value="@item.Value">@item.Text</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3 p-3 bg-light rounded border d-none" id="panelStock">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="text-muted small fw-bold">STOCK ACTUAL</span>
+                            <span class="badge bg-dark fs-6" id="lblStockActual">-</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tipo de Ajuste <span class="text-danger">*</span></label>
+                        <div class="d-flex gap-3">
+                            <div class="form-check form-check-inline flex-fill">
+                                <input class="form-check-input" type="radio" name="tipoAjuste" id="radioEntrada" value="ENTRADA" checked>
+                                <label class="form-check-label" for="radioEntrada">
+                                    <span class="badge bg-success fs-6 w-100 py-2"><i class="fas fa-plus me-1"></i>ENTRADA (Agregar stock)</span>
+                                </label>
+                            </div>
+                            <div class="form-check form-check-inline flex-fill">
+                                <input class="form-check-input" type="radio" name="tipoAjuste" id="radioSalida" value="SALIDA">
+                                <label class="form-check-label" for="radioSalida">
+                                    <span class="badge bg-danger fs-6 w-100 py-2"><i class="fas fa-minus me-1"></i>SALIDA (Reducir stock)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Cantidad <span class="text-danger">*</span></label>
+                        <input type="number" name="cantidad" id="txtCantidad" class="form-control form-control-lg text-center fw-bold"
+                               min="1" value="1" required />
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Motivo del Ajuste <span class="text-danger">*</span></label>
+                        <select name="motivo" class="form-select" required>
+                            <option value="">-- Seleccione motivo --</option>
+                            <option value="Merma / Producto vencido">🗑 Merma / Producto vencido</option>
+                            <option value="Pérdida o robo">🔒 Pérdida o robo</option>
+                            <option value="Error de conteo">📋 Error de conteo</option>
+                            <option value="Producto dañado">💔 Producto dañado</option>
+                            <option value="Inventario físico">📦 Inventario físico</option>
+                            <option value="Donación">🤝 Donación</option>
+                            <option value="Muestra / Uso interno">🧪 Muestra / Uso interno</option>
+                            <option value="Corrección de sistema">⚙ Corrección de sistema</option>
+                        </select>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-warning btn-lg fw-bold" id="btnRegistrar">
+                            <i class="fas fa-save me-2"></i> REGISTRAR AJUSTE
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('#cboProducto').select2({
+                theme: 'bootstrap-5',
+                width: '100%',
+                placeholder: "-- Seleccione un producto --"
+            });
+
+            $('#cboProducto').on('change', function() {
+                var id = $(this).val();
+                if (!id) { 
+                    $('#panelStock').addClass('d-none'); 
+                    return; 
+                }
+
+                $.getJSON('@Url.Action("GetStock", "Kardex")', { id: id }, function(data) {
+                    $('#lblStockActual').text(data.stock + ' unidades');
+                    $('#panelStock').removeClass('d-none');
+                });
+            });
+        });
+    </script>
+}

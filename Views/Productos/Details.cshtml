@@ -1,0 +1,112 @@
+@using MiniMarket.Web.Data
+@inject ApplicationDbContext _context
+@model MiniMarket.Web.Models.Producto
+
+@{
+    ViewData["Title"] = "Detalles del Producto";
+    
+    // Obtener moneda configurada
+    var config = _context.Configuraciones.FirstOrDefault();
+    string moneda = config != null ? config.MonedaSimbolo : "S/.";
+}
+
+<div class="container mt-4">
+    <div class="mb-3">
+        <a asp-action="Index" class="text-decoration-none text-muted">
+            <i class="fas fa-arrow-left me-1"></i> Volver al Inventario
+        </a>
+    </div>
+
+    <div class="card shadow border-0">
+        <div class="card-header bg-white py-3">
+            <h4 class="mb-0 fw-bold text-dark">
+                <i class="fas fa-info-circle text-info me-2"></i>Ficha del Producto
+            </h4>
+        </div>
+        
+        <div class="card-body p-4">
+            <div class="row">
+                <div class="col-md-5 text-center mb-4 mb-md-0">
+                    <div class="p-3 border rounded bg-light d-flex align-items-center justify-content-center" style="min-height: 350px;">
+                        @if (!string.IsNullOrEmpty(Model.ImagenUrl))
+                        {
+                            <img src="@Model.ImagenUrl" class="img-fluid rounded shadow-sm" style="max-height: 400px; object-fit: contain;" alt="@Model.Nombre" />
+                        }
+                        else
+                        {
+                            <div class="text-muted">
+                                <i class="fas fa-image fa-5x mb-3 text-secondary"></i>
+                                <p class="mb-0">Sin imagen disponible</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="col-md-7">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <span class="badge bg-primary mb-2">@Model.Categoria?.Nombre</span>
+                            <h2 class="fw-bold text-dark mb-1">@Model.Nombre</h2>
+                            <p class="text-muted small">ID: #@Model.Id.ToString("D4")</p>
+                        </div>
+                        <div class="text-end">
+                            <h3 class="text-success fw-bold mb-0">@moneda @Model.Precio.ToString("N2")</h3>
+                            <small class="text-muted">Precio Unitario</small>
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <div class="row mb-4">
+                        <div class="col-6">
+                            <h6 class="text-muted text-uppercase small fw-bold">Disponibilidad</h6>
+                            @if (Model.Stock > 10)
+                            {
+                                <div class="d-flex align-items-center text-success fw-bold fs-5">
+                                    <i class="fas fa-check-circle me-2"></i> @Model.Stock Unidades
+                                </div>
+                            }
+                            else if (Model.Stock > 0)
+                            {
+                                <div class="d-flex align-items-center text-warning fw-bold fs-5">
+                                    <i class="fas fa-exclamation-circle me-2"></i> @Model.Stock (Stock Bajo)
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="d-flex align-items-center text-danger fw-bold fs-5">
+                                    <i class="fas fa-times-circle me-2"></i> Agotado
+                                </div>
+                            }
+                        </div>
+                        <div class="col-6">
+                            <h6 class="text-muted text-uppercase small fw-bold">Estado</h6>
+                            @if (Model.Estado)
+                            {
+                                <span class="badge bg-success rounded-pill px-3">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger rounded-pill px-3">Inactivo</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h6 class="text-muted text-uppercase small fw-bold">Descripción</h6>
+                        <div class="p-3 bg-light rounded border">
+                            @if (!string.IsNullOrEmpty(Model.Descripcion))
+                            {
+                                <p class="mb-0 text-dark">@Model.Descripcion</p>
+                            }
+                            else
+                            {
+                                <p class="mb-0 text-muted fst-italic">No se ha añadido una descripción para este producto.</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

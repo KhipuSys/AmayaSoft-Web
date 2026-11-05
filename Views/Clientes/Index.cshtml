@@ -1,0 +1,95 @@
+@model IEnumerable<MiniMarket.Web.Models.Cliente>
+
+@{
+    ViewData["Title"] = "Clientes";
+    var clientes = Model?.ToList() ?? new List<MiniMarket.Web.Models.Cliente>();
+    var activos = clientes.Count(c => c.Estado);
+    var inactivos = clientes.Count - activos;
+}
+
+<link rel="stylesheet" href="~/css/clientes.css" asp-append-version="true" />
+
+<main class="clientes-page">
+    <header class="clientes-heading">
+        <div>
+            <span class="clientes-eyebrow">RELACIÓN COMERCIAL</span>
+            <h1><i class="fas fa-users" aria-hidden="true"></i>Cartera de clientes</h1>
+            <p>Consulta la información y el estado de atención de tus clientes.</p>
+        </div>
+        <a asp-action="Create" class="btn clientes-primary-action"><i class="fas fa-user-plus" aria-hidden="true"></i><span>Nuevo cliente</span></a>
+    </header>
+
+    <section class="clientes-summary" aria-label="Resumen de clientes">
+        <article class="clientes-summary-card clientes-summary-total"><span class="clientes-summary-icon"><i class="fas fa-address-book" aria-hidden="true"></i></span><div><span class="clientes-summary-label">Total de clientes</span><strong>@clientes.Count</strong></div></article>
+        <article class="clientes-summary-card"><span class="clientes-summary-icon is-active"><i class="fas fa-user-check" aria-hidden="true"></i></span><div><span class="clientes-summary-label">Activos</span><strong>@activos</strong></div></article>
+        <article class="clientes-summary-card"><span class="clientes-summary-icon is-inactive"><i class="fas fa-user-slash" aria-hidden="true"></i></span><div><span class="clientes-summary-label">Inactivos</span><strong>@inactivos</strong></div></article>
+    </section>
+
+    <section class="clientes-list-card">
+        <header class="clientes-list-header">
+            <div><h2>Directorio</h2><p>Datos de contacto y estado de cada cliente.</p></div>
+            <span class="clientes-count">@clientes.Count @(clientes.Count == 1 ? "cliente" : "clientes")</span>
+        </header>
+
+        @if (clientes.Count > 0)
+        {
+            <div class="table-responsive clientes-table-wrap">
+                <table class="table clientes-table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col">Documento</th>
+                            <th scope="col">Nombre / razón social</th>
+                            <th scope="col">Teléfono</th>
+                            <th scope="col">Estado</th>
+                            @if (User.IsInRole("Administrador"))
+                            {
+                                <th scope="col" class="clientes-actions-heading">Acciones</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in clientes)
+                        {
+                            <tr class="@(item.Estado ? "" : "is-inactive")">
+                                <td><span class="clientes-documento">@(string.IsNullOrWhiteSpace(item.Documento) ? "—" : item.Documento)</span></td>
+                                <td><span class="clientes-name">@item.Nombre</span></td>
+                                <td>@(string.IsNullOrWhiteSpace(item.Telefono) ? "—" : item.Telefono)</td>
+                                <td><span class="clientes-state @(item.Estado ? "is-active" : "is-inactive")"><i class="fas @(item.Estado ? "fa-circle-check" : "fa-circle-minus")" aria-hidden="true"></i>@(item.Estado ? "Activo" : "Inactivo")</span></td>
+                                @if (User.IsInRole("Administrador"))
+                                {
+                                    <td>
+                                        <div class="clientes-row-actions">
+                                            <a asp-action="Compras" asp-route-id="@item.Id" class="clientes-icon-action history" title="Historial de compras" aria-label="Historial de compras de @item.Nombre"><i class="fas fa-clock-rotate-left" aria-hidden="true"></i></a>
+                                            <a asp-action="Edit" asp-route-id="@item.Id" class="clientes-icon-action edit" title="Editar cliente" aria-label="Editar a @item.Nombre"><i class="fas fa-pen" aria-hidden="true"></i></a>
+                                            @if (item.Estado)
+                                            {
+                                                <form asp-action="CambiarEstado" asp-route-id="@item.Id" method="post" class="js-swal-confirm" data-swal-title="¿Desactivar cliente?" data-swal-text="El cliente quedará inactivo." data-swal-confirm="Sí, desactivar">
+                                                    <button type="submit" class="clientes-icon-action deactivate" title="Desactivar cliente" aria-label="Desactivar a @item.Nombre"><i class="fas fa-user-slash" aria-hidden="true"></i></button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                <form asp-action="CambiarEstado" asp-route-id="@item.Id" method="post">
+                                                    <button type="submit" class="clientes-icon-action activate" title="Activar cliente" aria-label="Activar a @item.Nombre"><i class="fas fa-user-check" aria-hidden="true"></i></button>
+                                                </form>
+                                            }
+                                        </div>
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="clientes-empty">
+                <span class="clientes-empty-icon"><i class="fas fa-user-group" aria-hidden="true"></i></span>
+                <h3>Aún no hay clientes</h3>
+                <p>Registra el primer cliente para comenzar tu directorio.</p>
+                <a asp-action="Create" class="btn clientes-primary-action"><i class="fas fa-user-plus" aria-hidden="true"></i><span>Registrar cliente</span></a>
+            </div>
+        }
+    </section>
+</main>

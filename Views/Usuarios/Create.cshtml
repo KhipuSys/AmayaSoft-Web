@@ -1,0 +1,46 @@
+@model MiniMarket.Web.Models.UsuarioRegistroModel
+
+@{
+    ViewData["Title"] = "Nuevo Usuario";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow border-0">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Registrar Nuevo Usuario</h5>
+            </div>
+            <div class="card-body p-4">
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+                    <partial name="_DatosPersonales" model="Model" />
+
+                    <partial name="_CorreoAcceso" model="Model" />
+
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label fw-bold">Contraseña Temporal</label>
+                        <input asp-for="Password" type="password" class="form-control" required />
+                        <small class="text-muted">Mínimo 6 caracteres.</small>
+                    </div>
+
+                    <div class="mb-4">
+                        <label asp-for="Rol" class="form-label fw-bold">Rol / Permisos</label>
+                        <select asp-for="Rol" class="form-select" asp-items="ViewBag.Roles">
+                            <option value="">-- Seleccionar Rol --</option>
+                        </select>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-save me-2"></i> Guardar Usuario
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script src="~/js/usuarios.js" asp-append-version="true"></script>
+}

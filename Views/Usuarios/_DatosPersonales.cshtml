@@ -1,0 +1,23 @@
+@model MiniMarket.Web.Models.UsuarioDatosModel
+<fieldset class="mb-4" data-datos-personales data-consulta-url="@Url.Action("ConsultarDni", "Usuarios")">
+    <legend class="fs-6 fw-bold">Datos personales</legend>
+    <div class="mb-3">
+        <label asp-for="Dni" class="form-label"></label>
+        <div class="input-group">
+            <input asp-for="Dni" class="form-control" inputmode="numeric" maxlength="8" pattern="[0-9]{8}" placeholder="8 dígitos" autocomplete="off" required />
+            <button type="button" class="btn btn-outline-primary" data-buscar-dni>Buscar DNI</button>
+        </div>
+        <span asp-validation-for="Dni" class="text-danger"></span>
+        <div class="form-text" data-estado-dni role="status" aria-live="polite">La búsqueda es opcional: si el servicio no responde, ingresa nombres y apellidos manualmente y guarda el usuario.</div>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Nombres" class="form-label"></label>
+        <input asp-for="Nombres" class="form-control" maxlength="100" autocomplete="given-name" required />
+        <span asp-validation-for="Nombres" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Apellidos" class="form-label"></label>
+        <input asp-for="Apellidos" class="form-control" maxlength="100" autocomplete="family-name" required />
+        <span asp-validation-for="Apellidos" class="text-danger"></span>
+    </div>
+</fieldset>

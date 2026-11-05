@@ -1,0 +1,67 @@
+@model MiniMarket.Web.Models.Proveedor
+
+@{
+    ViewData["Title"] = "Editar Proveedor";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow border-0">
+                <div class="card-header bg-warning text-dark py-3">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-edit me-2"></i>Editar Proveedor</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form asp-action="Edit">
+                        <input type="hidden" asp-for="Id" />
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="Ruc" class="form-label fw-bold"></label>
+                            <input asp-for="Ruc" class="form-control" readonly />
+                            <small class="text-muted">El RUC no se puede modificar.</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="RazonSocial" class="form-label fw-bold"></label>
+                            <input asp-for="RazonSocial" class="form-control" />
+                            <span asp-validation-for="RazonSocial" class="text-danger"></span>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Contacto" class="form-label fw-bold"></label>
+                                <input asp-for="Contacto" class="form-control" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Telefono" class="form-label fw-bold"></label>
+                                <input asp-for="Telefono" class="form-control" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Correo" class="form-label fw-bold"></label>
+                            <input asp-for="Correo" class="form-control" type="email" />
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Direccion" class="form-label fw-bold"></label>
+                            <textarea asp-for="Direccion" class="form-control" rows="2"></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-warning fw-bold text-dark">
+                                <i class="fas fa-save me-2"></i> Actualizar Datos
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

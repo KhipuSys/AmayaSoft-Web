@@ -1,0 +1,56 @@
+@model MiniMarket.Web.Models.UsuarioEditModel
+
+@{
+    ViewData["Title"] = "Editar Usuario";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="text-primary"><i class="fas fa-user-edit me-2"></i>Editar Usuario</h2>
+        <p class="text-muted">Actualiza los datos personales, el rol o la contraseña del usuario.</p>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i> Volver
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow border-0">
+            <div class="card-body p-4">
+                <form asp-action="Edit" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="Id" value="@Model.Id" />
+                    <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+                    <partial name="_DatosPersonales" model="Model" />
+
+                    <partial name="_CorreoAcceso" model="Model" />
+
+                    <div class="mb-3">
+                        <label for="NuevoRol" class="form-label fw-bold">Rol <span class="text-danger">*</span></label>
+                        @Html.DropDownList("NuevoRol", ViewBag.Roles as IEnumerable<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>, new { @class = "form-select", required = "required" })
+                        <small class="text-muted">Rol actual: <strong>@Model.RolActual</strong></small>
+                    </div>
+
+                    <hr />
+
+                    <div class="mb-3">
+                        <label for="NuevaPassword" class="form-label fw-bold">Nueva Contraseña</label>
+                        <input type="password" id="NuevaPassword" name="NuevaPassword" class="form-control"
+                               placeholder="Dejar vacío para no cambiar" minlength="6" />
+                        <small class="text-muted">Mínimo 6 caracteres. Si se deja en blanco, la contraseña no cambia.</small>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save me-2"></i>Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts {
+    <script src="~/js/usuarios.js" asp-append-version="true"></script>
+}

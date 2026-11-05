@@ -1,0 +1,801 @@
+@using Microsoft.AspNetCore.Identity
+@using MiniMarket.Web.Data
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
+@inject ApplicationDbContext _context
+
+@{
+    var globalConfig = _context.Configuraciones.FirstOrDefault();
+    var logoUrl = globalConfig?.LogoUrl;
+    var fallbackLogoUrl = Url.Content("~/images/logos/amayasoft-logo.png?v=2");
+    var nombreEmpresa = "AmayaSoft";
+}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - @nombreEmpresa</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.11/css/dataTables.bootstrap5.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.bootstrap5.min.css" />
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --brand-primary: #2563eb;
+            --brand-primary-hover: #1d4ed8;
+            --brand-secondary: #059669;
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: rgba(37, 99, 235, 0.14);
+        }
+
+        body { 
+            background-color: #f8fafc; 
+            font-family: 'Outfit', sans-serif; 
+            overflow-x: hidden;
+        }
+
+        /* --- LOGICA RESPONSIVA DEL SIDEBAR --- */
+        #wrapper {
+            display: flex;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        .sidebar {
+            min-width: 250px;
+            max-width: 250px;
+            background-color: var(--sidebar-bg);
+            color: #fff;
+            min-height: 100vh;
+            transition: margin 0.3s ease-out;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            z-index: 1040;
+        }
+
+        .sidebar a { color: #cbd5e1; text-decoration: none; padding: 12px 15px; display: flex; align-items: center; border-radius: 8px; margin-bottom: 5px; margin-left: 10px; margin-right: 10px; transition: all 0.2s; font-weight: 500; }
+        .sidebar a:hover { background-color: var(--sidebar-hover); color: var(--brand-primary); }
+        .sidebar a.active { background-color: var(--brand-primary); color: #fff;  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.28); }
+        .sidebar a.active:hover { color: #fff; }
+        .sidebar .section-title { font-size: 0.75rem; text-transform: uppercase; color: #64748b; padding: 10px 20px; font-weight: 700; letter-spacing: 1px; margin-top: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 10px; }
+        
+        .logo-area { padding: 25px 20px; font-size: 1.5rem; font-weight: 700; color: #fff; display: flex; align-items: center; justify-content: center; background-color: rgba(0,0,0,0.15); border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .logo-area i { color: var(--brand-primary); }
+
+        .main-content {
+            width: 100%;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+
+        .navbar-top { 
+            background-color: #fff; 
+            box-shadow: 0 4px 15px rgba(0,0,0,.03); 
+            padding: 12px 25px; 
+            margin-bottom: 25px; 
+            border-radius: 12px; 
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 20px;
+        }
+
+
+        .card { box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03); border: 1px solid rgba(0,0,0,0.05); border-radius: 12px; }
+        .btn-primary { background-color: var(--brand-primary); border-color: var(--brand-primary); }
+        .btn-primary:hover, .btn-primary:focus { background-color: var(--brand-primary-hover); border-color: var(--brand-primary-hover); }
+        .text-primary { color: var(--brand-primary) !important; }
+
+        /* --- ESTILOS DE CONTRASTE OSCURO PULIDO --- */
+        body.contraste-oscuro {
+            background-color: #0c0a09 !important;
+            color: #fbbf24 !important;
+        }
+        
+        body.contraste-oscuro .card, 
+        body.contraste-oscuro .sidebar, 
+        body.contraste-oscuro .navbar-top,
+        body.contraste-oscuro .modal-content,
+        body.contraste-oscuro .dropdown-menu,
+        body.contraste-oscuro .bg-white,
+        body.contraste-oscuro .bg-light {
+            background-color: #12100e !important;
+            color: #fcd34d !important;
+            border-color: #78350f !important;
+        }
+
+        body.contraste-oscuro div[style*="background: white"],
+        body.contraste-oscuro div[style*="background:#fff"],
+        body.contraste-oscuro div[style*="background: #fff"],
+        body.contraste-oscuro div[style*="background-color: white"],
+        body.contraste-oscuro div[style*="background-color: #fff"] {
+            background-color: #12100e !important;
+            color: #fcd34d !important;
+            border-color: #78350f !important;
+        }
+
+        body.contraste-oscuro .bg-primary,
+        body.contraste-oscuro .bg-info,
+        body.contraste-oscuro div[class*="bg-primary"],
+        body.contraste-oscuro div[class*="bg-info"] {
+            background-color: #1c1510 !important;
+            color: #fcd34d !important;
+            border: 1px solid #78350f !important;
+        }
+
+        body.contraste-oscuro a, 
+        body.contraste-oscuro span,
+        body.contraste-oscuro p,
+        body.contraste-oscuro h1, 
+        body.contraste-oscuro h2, 
+        body.contraste-oscuro h3, 
+        body.contraste-oscuro h4,
+        body.contraste-oscuro h5,
+        body.contraste-oscuro th,
+        body.contraste-oscuro td,
+        body.contraste-oscuro label,
+        body.contraste-oscuro .text-primary,
+        body.contraste-oscuro .text-dark,
+        body.contraste-oscuro .text-muted,
+        body.contraste-oscuro .text-info {
+            color: #fcd34d !important;
+        }
+
+        body.contraste-oscuro input,
+        body.contraste-oscuro select,
+        body.contraste-oscuro textarea {
+            background-color: #1c1917 !important;
+            color: #fcd34d !important;
+            border-color: #78350f !important;
+        }
+
+        body.contraste-oscuro .table {
+            color: #fcd34d !important;
+            background-color: #12100e !important;
+        }
+        body.contraste-oscuro .table th, 
+        body.contraste-oscuro .table td {
+            background-color: transparent !important;
+            border-color: #451a03 !important;
+        }
+
+        /* Adaptar botón de accesibilidad en modo oscuro */
+        body.contraste-oscuro #accessibility-toggle-btn {
+            background-color: #1c1510 !important;
+            border-color: #78350f !important;
+            color: #fcd34d !important;
+        }
+
+        body.contraste-suave {
+            filter: grayscale(100%) contrast(120%);
+            background-color: #ffffff !important;
+        }
+
+        /* Borde y tono gris plomo (igual al icono de perfil) para el botón de accesibilidad en modo suave */
+        body.contraste-suave #accessibility-toggle-btn {
+            background-color: #ffffff !important;
+            border: 1px solid #666666 !important;
+            color: #555555 !important;
+        }
+
+        body.dislexia-amigable {
+            font-family: 'Comic Sans MS', 'Comic Sans', cursive, sans-serif !important;
+            letter-spacing: 1px;
+        }
+        
+        /* --- ESTILOS DEL CURSOR ANIMADO (ADAPTABLE A TEMAS) --- */
+        .custom-cursor-dot {
+            position: fixed;
+            width: 14px;
+            height: 14px;
+            background-color: #2563eb;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 99999;
+            transform: translate(-50%, -50%);
+            transition: transform 0.1s ease, background-color 0.3s ease;
+        }
+
+        .custom-cursor-halo {
+            position: fixed;
+            width: 65px;
+            height: 65px;
+            border: 2.5px solid rgba(37, 99, 235, 0.5);
+            background-color: rgba(37, 99, 235, 0.12);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 99998;
+            transform: translate(-50%, -50%);
+            animation: heartbeat-halo 1.5s infinite ease-in-out;
+            transition: border-color 0.3s ease, background-color 0.3s ease;
+        }
+
+        /* Cambio de color automático del cursor en Modo Oscuro (Ámbar/Dorado) */
+        body.contraste-oscuro .custom-cursor-dot {
+            background-color: #fcd34d !important;
+        }
+        body.contraste-oscuro .custom-cursor-halo {
+            border-color: rgba(252, 211, 77, 0.6) !important;
+            background-color: rgba(252, 211, 77, 0.15) !important;
+        }
+
+        @@keyframes heartbeat-halo {
+            0% {
+                transform: translate(-50%, -50%) scale(0.9);
+                opacity: 0.8;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.35);
+                opacity: 0.25;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(0.9);
+                opacity: 0.8;
+            }
+        }
+
+        /* --- ESTILOS OSCUROS PARA EL MENÚ FLOTANTE DE ACCESIBILIDAD --- */
+        body.contraste-oscuro #accessibility-panel {
+            background-color: #12100e !important;
+            border-color: #78350f !important;
+        }
+        body.contraste-oscuro #accessibility-panel div[style*="background: #f8fafc"],
+        body.contraste-oscuro #accessibility-panel div[style*="background:#f8fafc"] {
+            background-color: #12100e !important;
+        }
+        body.contraste-oscuro #accessibility-panel div[onclick*="ciclar"],
+        body.contraste-oscuro #accessibility-panel div[onclick*="toggle"],
+        body.contraste-oscuro #accessibility-panel div[onclick*="restablecer"] {
+            background-color: #1c1917 !important;
+            border-color: #78350f !important;
+            color: #fcd34d !important;
+        }
+        body.contraste-oscuro #accessibility-panel div[onclick*="ciclar"] div,
+        body.contraste-oscuro #accessibility-panel div[onclick*="toggle"] div {
+            color: #fcd34d !important;
+        }
+    </style>
+    <link rel="stylesheet" href="~/css/responsive.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/amayasoft-theme-demo.css" asp-append-version="true" />
+</head>
+<body class="@ViewData["BodyClass"]">
+    @Html.AntiForgeryToken()
+    
+    <div class="d-flex" id="wrapper">
+        
+        <div class="sidebar border-end offcanvas-lg offcanvas-start" id="sidebar-wrapper" tabindex="-1" aria-label="Navegación principal">
+            <div class="d-flex justify-content-between align-items-center p-3 d-lg-none">
+                <strong>Menú principal</strong>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" data-bs-target="#sidebar-wrapper" aria-label="Cerrar menú"></button>
+            </div>
+            <div class="logo-area mb-3 text-center">
+                @if (!string.IsNullOrEmpty(logoUrl))
+                {
+                    <img src="@logoUrl" alt="Logo Empresa" onerror="this.onerror=null;this.src='@fallbackLogoUrl';" style="max-height: 50px; max-width: 90%; object-fit: contain; transform: translate(8px, 8px);" />
+                }
+                else
+                {
+                    <span><i class="fas fa-shopping-basket me-2"></i> @nombreEmpresa</span>
+                }
+            </div>
+
+            <div class="list-group list-group-flush px-2">
+                @if (SignInManager.IsSignedIn(User))
+                {
+                    <div class="section-title">Principal</div>
+                    <a asp-controller="Home" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" ? "active" : "")">
+                        <i class="fas fa-tachometer-alt me-2" style="width:20px"></i> Dashboard
+                    </a>
+                    <a asp-controller="Caja" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Caja" && ViewContext.RouteData.Values["Action"]?.ToString() == "Index" ? "active" : "")">
+                        <i class="fas fa-cash-register me-2" style="width:20px"></i> Caja / Turno
+                    </a>
+                    <a asp-controller="Ventas" asp-action="Create" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Ventas" && ViewContext.RouteData.Values["Action"]?.ToString() == "Create" ? "active" : "") text-info fw-bold">
+                        <i class="fas fa-shopping-cart me-2" style="width:20px"></i> PUNTO DE VENTA
+                    </a>
+
+                    @if (User.IsInRole("Cajero") && !User.IsInRole("Administrador"))
+                    {
+                        <div class="section-title text-success">Ventas y Clientes</div>
+                        <a asp-controller="Ventas" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Ventas" && ViewContext.RouteData.Values["Action"]?.ToString() == "Index" ? "active" : "")">
+                            <i class="fas fa-history me-2" style="width:20px"></i> Historial Ventas
+                        </a>
+                        <a asp-controller="Clientes" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Clientes" ? "active" : "")">
+                            <i class="fas fa-users me-2" style="width:20px"></i> Clientes
+                        </a>
+                        <a asp-controller="Caja" asp-action="Historial" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Caja" && ViewContext.RouteData.Values["Action"]?.ToString() == "Historial" ? "active" : "")">
+                            <i class="fas fa-cash-register me-2" style="width:20px"></i> Historial Caja
+                        </a>
+                    }
+
+                    @if (User.IsInRole("Administrador"))
+                    {
+                        <div class="section-title text-success">Ventas y Clientes</div>
+                        <a asp-controller="Ventas" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Ventas" && ViewContext.RouteData.Values["Action"]?.ToString() == "Index" ? "active" : "")">
+                            <i class="fas fa-history me-2" style="width:20px"></i> Historial Ventas
+                        </a>
+                        <a asp-controller="Gastos" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Gastos" ? "active" : "")">
+                            <i class="fas fa-hand-holding-usd me-2" style="width:20px"></i> Control de Gastos
+                        </a>
+                        <a asp-controller="Caja" asp-action="Historial" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Caja" && ViewContext.RouteData.Values["Action"]?.ToString() == "Historial" ? "active" : "")">
+                            <i class="fas fa-cash-register me-2" style="width:20px"></i> Historial Caja
+                        </a>
+                        <a asp-controller="Clientes" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Clientes" ? "active" : "")">
+                            <i class="fas fa-users me-2" style="width:20px"></i> Clientes
+                        </a>
+                        <a asp-controller="Reportes" asp-action="Ventas" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Reportes" ? "active" : "") text-info fw-bold">
+                            <i class="fas fa-chart-pie me-2" style="width:20px"></i> Reportes Financieros
+                        </a>
+
+                        <div class="section-title text-primary">Compras e Inventario</div>
+                        <a asp-controller="Compras" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Compras" ? "active" : "")">
+                            <i class="fas fa-file-invoice-dollar me-2" style="width:20px"></i> Compras
+                        </a>
+                        <a asp-controller="Productos" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Productos" ? "active" : "")">
+                            <i class="fas fa-boxes me-2" style="width:20px"></i> Productos
+                        </a>
+                        <a asp-controller="Etiquetas" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Etiquetas" ? "active" : "")">
+                            <i class="fas fa-barcode me-2" style="width:20px"></i> Imprimir Etiquetas
+                        </a>
+                        <a asp-controller="Categorias" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Categorias" ? "active" : "")">
+                            <i class="fas fa-tags me-2" style="width:20px"></i> Categorías
+                        </a>
+                        <a asp-controller="Kardex" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Kardex" ? "active" : "")">
+                            <i class="fas fa-exchange-alt me-2" style="width:20px"></i> Kardex
+                        </a>
+                        <a asp-controller="Prediccion" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Prediccion" ? "active" : "")">
+                            <i class="fas fa-chart-line me-2" style="width:20px"></i> Predicción de Stock
+                        </a>
+                        <a asp-controller="Proveedores" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Proveedores" ? "active" : "")">
+                            <i class="fas fa-truck me-2" style="width:20px"></i> Proveedores
+                        </a>
+
+                        <div class="section-title text-danger">Mantenimiento</div>
+                        <a asp-controller="Usuarios" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Usuarios" ? "active" : "")">
+                            <i class="fas fa-user-shield me-2" style="width:20px"></i> Usuarios
+                        </a>
+                        <a asp-controller="Configuracion" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Configuracion" ? "active" : "")">
+                            <i class="fas fa-cogs me-2" style="width:20px"></i> Configuración
+                        </a>
+                        <a asp-controller="Seguridad" asp-action="Index" class="@(ViewContext.RouteData.Values["Controller"]?.ToString() == "Seguridad" ? "active" : "")">
+                            <i class="fas fa-shield-alt me-2" style="width:20px"></i> Seguridad
+                        </a>
+                    }
+                }
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="navbar-top d-flex justify-content-end align-items-center">
+                <button type="button" class="btn btn-outline-primary d-lg-none me-auto" data-bs-toggle="offcanvas" data-bs-target="#sidebar-wrapper" aria-controls="sidebar-wrapper" aria-label="Abrir menú principal">
+                    <i class="fas fa-bars" aria-hidden="true"></i> <span class="ms-1">Menú</span>
+                </button>
+
+                <!-- BOTÓN DE ACCESIBILIDAD CON ANIMACIÓN -->
+                <div style="position: relative; margin-right: 20px;" class="me-3">
+                    <button id="accessibility-toggle-btn" class="btn btn-light border rounded-circle shadow-sm" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; background-color: #f1f5f9; color: #2563eb;" title="Menú de Accesibilidad">
+                        <i class="fas fa-universal-access" style="font-size: 28px;"></i>
+                    </button>
+
+                    <!-- MODAL / PANEL DE ACCESIBILIDAD DE 4 TARJETAS -->
+                    <div id="accessibility-panel" style="display: none; position: absolute; right: 0; top: 55px; width: 380px; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); overflow: hidden; border: 1px solid #e2e8f0; z-index: 9999; font-family: inherit;">
+                        <div style="background-color: #0f172a; color: white; padding: 14px 18px; font-weight: 600; display: flex; justify-content: space-between; align-items: center;">
+                            <span><i class="fas fa-universal-access me-2"></i> Menú de accesibilidad</span>
+                            <button id="accessibility-close-btn" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;">&times;</button>
+                        </div>
+                        <div style="padding: 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #f8fafc;">
+                            <!-- Tarjeta 1: Tamaño de texto -->
+                            <div onclick="ciclarTamanioTexto()" style="background: white; border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#cbd5e1'">
+                                <i class="fas fa-text-height fa-lg text-primary mb-1"></i>
+                                <div style="font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 6px;">Tamaño de texto</div>
+                                <div style="display: flex; justify-content: center; gap: 3px;" id="barras-texto">
+                                    <span class="bar-t" style="width: 12px; height: 4px; background: #334155; border-radius: 2px;"></span>
+                                    <span class="bar-t" style="width: 12px; height: 4px; background: #cbd5e1; border-radius: 2px;"></span>
+                                    <span class="bar-t" style="width: 12px; height: 4px; background: #cbd5e1; border-radius: 2px;"></span>
+                                    <span class="bar-t" style="width: 12px; height: 4px; background: #cbd5e1; border-radius: 2px;"></span>
+                                </div>
+                            </div>
+
+                            <!-- Tarjeta 2: Contrastes -->
+                            <div onclick="toggleAltoContraste()" style="background: white; border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#cbd5e1'">
+                                <i class="fas fa-adjust fa-lg text-primary mb-1"></i>
+                                <div style="font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 6px;">Contrastes</div>
+                                <div style="display: flex; justify-content: center; gap: 3px;">
+                                    <span class="bar-c" style="width: 12px; height: 4px; background: #334155; border-radius: 2px;"></span>
+                                    <span class="bar-c" style="width: 12px; height: 4px; background: #cbd5e1; border-radius: 2px;"></span>
+                                    <span class="bar-c" style="width: 12px; height: 4px; background: #cbd5e1; border-radius: 2px;"></span>
+                                </div>
+                            </div>
+
+                            <!-- Tarjeta 3: Cursor grande -->
+                            <div onclick="toggleCursorGrande()" style="background: white; border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#cbd5e1'">
+                                <i class="fas fa-mouse-pointer fa-lg text-primary mb-1"></i>
+                                <div style="font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 6px;">Cursor</div>
+                                <div style="display: flex; justify-content: center; gap: 4px;">
+                                    <span class="bar-u" style="width: 28px; height: 4px; background: #334155; border-radius: 2px;"></span>
+                                    <span class="bar-u" style="width: 28px; height: 4px; background: #cbd5e1; border-radius: 2px;"></span>
+                                </div>
+                            </div>
+
+                            <!-- Tarjeta 4: Dislexia amigable -->
+                            <div onclick="toggleDislexia()" style="background: white; border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#2563eb'" onmouseout="this.style.borderColor='#cbd5e1'">
+                                <i class="fas fa-font fa-lg text-primary mb-1"></i>
+                                <div style="font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 6px;">Dislexia amigable</div>
+                                <div style="display: flex; justify-content: center; gap: 4px;">
+                                    <span class="bar-d" style="width: 28px; height: 4px; background: #334155; border-radius: 2px;"></span>
+                                    <span class="bar-d" style="width: 28px; height: 4px; background: #cbd5e1; border-radius: 2px;"></span>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- BOTÓN INFERIOR DE RESTABLECER VALORES -->
+                        <div style="padding: 0 16px 16px 16px; background: #f8fafc;">
+                            <div onclick="restablecerAccesibilidad()" style="background: #ffeeec; border: 1px solid #fca5a5; border-radius: 10px; padding: 10px; text-align: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#dc2626'" onmouseout="this.style.borderColor='#fca5a5'">
+                                <i class="fas fa-undo text-danger me-2"></i>
+                                <span style="font-size: 13px; font-weight: 600; color: #991b1b;">Restablecer valores</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- PERFIL DE USUARIO -->
+                @if (SignInManager.IsSignedIn(User))
+                {
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex align-items-center text-dark">
+                            <i class="fas fa-user-circle fa-2x me-2" style="color: var(--brand-primary);"></i>
+                            <div class="d-none d-md-block line-height-normal text-start">
+                                <div class="fw-bold">@User.Identity.Name</div>
+                                @if (User.IsInRole("Administrador")) { <small class="fw-bold" style="font-size:0.7em; color: var(--brand-primary);">ADMINISTRADOR</small> }
+                                else { <small class="text-success fw-bold" style="font-size:0.7em">CAJERO</small> }
+                            </div>
+                        </div>
+                        <a class="btn btn-outline-primary btn-sm fw-semibold" asp-area="Identity" asp-page="/Account/Manage/TwoFactorAuth">
+                            <i class="fas fa-shield-alt me-2"></i>2FA/Authy
+                        </a>
+                        <form class="form-inline m-0" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
+                            <button type="submit" class="btn btn-outline-danger btn-sm fw-semibold">
+                                <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
+                            </button>
+                        </form>
+                    </div>
+                }
+                else
+                {
+                     <a class="btn btn-primary" asp-area="Identity" asp-page="/Account/Login">Iniciar Sesión</a>
+                }
+            </div>
+
+            <div class="container-fluid p-0">
+                @RenderBody()
+            </div>
+            
+            <footer class="mt-5 text-center text-muted small py-3">
+                © 2026 - AmayaSoft - Sistema de Gestión Comercial
+                <div>Fechas y horas de Perú (UTC−5).</div>
+            </footer>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.11/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.11/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.print.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        document.addEventListener('submit', function (event) {
+            const form = event.target;
+            if (!form.classList || !form.classList.contains('js-swal-confirm') || form.dataset.swalConfirmed === 'true') return;
+
+            event.preventDefault();
+            const countedCash = form.dataset.swalCajaCierre === 'true'
+                ? Number(form.querySelector('[name="montoCierre"]')?.value || 0).toFixed(2)
+                : null;
+            const closeCashHtml = form.dataset.swalCajaCierre === 'true'
+                ? `<div style="font-size:1.05rem;line-height:1.45;margin-top:.35rem">
+                       <div>Efectivo contado: <strong>S/. ${countedCash}</strong></div>
+                       <div>Esperado: <strong>S/. ${form.dataset.expectedCash || '0.00'}</strong></div>
+                   </div>`
+                : null;
+
+            Swal.fire({
+                title: form.dataset.swalTitle || '¿Confirmar acción?',
+                text: closeCashHtml ? undefined : (form.dataset.swalText || ''),
+                html: closeCashHtml || undefined,
+                icon: form.dataset.swalIcon || 'warning',
+                iconColor: form.dataset.swalIconColor || undefined,
+                showCancelButton: true,
+                confirmButtonText: form.dataset.swalConfirm || 'Sí, continuar',
+                cancelButtonText: form.dataset.swalCancel || 'Cancelar',
+                confirmButtonColor: form.dataset.swalConfirmColor || '#dc3545',
+                cancelButtonColor: form.dataset.swalCancelColor || '#6c757d'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.dataset.swalConfirmed = 'true';
+                    form.submit();
+                }
+            });
+        });
+    </script>
+
+    <!-- Widget Flotante de Asistente IA - AmayaSoft -->
+    <div id="ai-chat-widget" style="position: fixed; bottom: 20px; right: 20px; z-index: 9999;">
+        <button id="ai-toggle-btn" style="background-color: #2563eb; color: white; border: none; border-radius: 50%; width: 55px; height: 55px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 24px;">
+            🤖
+        </button>
+        <div id="ai-chat-box" style="display: none; position: absolute; bottom: 70px; right: 0; width: min(420px, calc(100vw - 40px)); max-height: calc(100dvh - 110px); overflow-y: auto; background: white; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.2); border: 1px solid #e2e8f0; font-family: inherit;">
+            <div style="background-color: #0f172a; color: white; padding: 12px 16px; font-weight: 600; display: flex; justify-content: space-between; align-items: center;">
+                <span>Asistente IA - AmayaSoft</span>
+                <button id="ai-close-btn" style="background: none; border: none; color: white; font-size: 18px; cursor: pointer;">&times;</button>
+            </div>
+            <div class="d-flex flex-wrap gap-1 p-2" aria-label="Consultas rápidas">
+                @foreach (var consulta in new[] { "Resumen del día", "Alertas del negocio", "Ventas de esta semana", "Stock bajo", "Mi caja", "Ayuda" })
+                {
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-ai-consulta="@consulta">@consulta</button>
+                }
+            </div>
+            <div id="ai-chat-messages" role="log" aria-live="polite" style="height: 280px; overflow-y: auto; padding: 12px; font-size: 14px; background: #f8fafc; display: flex; flex-direction: column; gap: 8px;">
+                <div style="background: #e2e8f0; padding: 8px 12px; border-radius: 8px; max-width: 85%; align-self: flex-start;">
+                    ¡Hola! Consulta resúmenes, ventas, stock, clientes y caja. Puedes indicar fechas o rangos. Escribe «ayuda» para ver ejemplos.
+                </div>
+            </div>
+            <div style="padding: 10px; border-top: 1px solid #e2e8f0; display: flex; gap: 6px; background: white;">
+                <input type="text" id="ai-user-input" maxlength="1000" aria-label="Consulta al asistente" placeholder="Escribe tu consulta..." style="flex: 1; min-width: 0; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; font-size: 14px; outline: none;" />
+                <button id="ai-send-btn" style="background-color: #2563eb; color: white; border: none; border-radius: 6px; padding: 8px 12px; cursor: pointer; font-weight: 600;">Enviar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS DE CONTROL DE WIDGETS -->
+    <script>
+        // Crear elementos del cursor animado (punto central y halo grande con latido)
+        const cursorDot = document.createElement('div');
+        cursorDot.className = 'custom-cursor-dot';
+        cursorDot.style.display = 'none';
+        document.body.appendChild(cursorDot);
+
+        const cursorHalo = document.createElement('div');
+        cursorHalo.className = 'custom-cursor-halo';
+        cursorHalo.style.display = 'none';
+        document.body.appendChild(cursorHalo);
+
+        // Seguir el movimiento del mouse
+        window.addEventListener('mousemove', (e) => {
+            if (document.body.classList.contains('cursor-grande')) {
+                cursorDot.style.display = 'block';
+                cursorHalo.style.display = 'block';
+                
+                cursorDot.style.left = e.clientX + 'px';
+                cursorDot.style.top = e.clientY + 'px';
+                
+                cursorHalo.style.left = e.clientX + 'px';
+                cursorHalo.style.top = e.clientY + 'px';
+            }
+        });
+
+        // Cargar preferencias guardadas al iniciar
+        document.addEventListener("DOMContentLoaded", function() {
+            let savedContraste = localStorage.getItem('modoContraste');
+            if (savedContraste) {
+                tipoContraste = parseInt(savedContraste);
+                aplicarContrasteVisual(tipoContraste);
+            }
+            if (localStorage.getItem('dislexia') === 'true') {
+                document.body.classList.add('dislexia-amigable');
+                actualizarBarraDoble('d', true);
+            }
+            if (localStorage.getItem('cursorGrande') === 'true') {
+                document.body.classList.add('cursor-grande');
+                actualizarBarraDoble('u', true);
+                cursorDot.style.display = 'block';
+                cursorHalo.style.display = 'block';
+            }
+            let savedSize = localStorage.getItem('tamanioTexto');
+            if (savedSize) {
+                nivelTexto = parseInt(savedSize);
+                const tamanios = [16, 18, 20, 22];
+                document.body.style.fontSize = tamanios[nivelTexto] + 'px';
+                actualizarBarrasTexto(nivelTexto);
+            }
+        });
+
+        document.getElementById('accessibility-toggle-btn').addEventListener('click', function(e) {
+            e.stopPropagation();
+            const panel = document.getElementById('accessibility-panel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        });
+        document.getElementById('accessibility-close-btn').addEventListener('click', function() {
+            document.getElementById('accessibility-panel').style.display = 'none';
+        });
+        window.addEventListener('click', function(e) {
+            const panel = document.getElementById('accessibility-panel');
+            const btn = document.getElementById('accessibility-toggle-btn');
+            if (!panel.contains(e.target) && !btn.contains(e.target)) {
+                panel.style.display = 'none';
+            }
+        });
+
+        let nivelTexto = 0; 
+        function ciclarTamanioTexto() {
+            nivelTexto = (nivelTexto + 1) % 4;
+            localStorage.setItem('tamanioTexto', nivelTexto);
+            actualizarBarrasTexto(nivelTexto);
+            const tamanios = [16, 18, 20, 22];
+            document.body.style.fontSize = tamanios[nivelTexto] + 'px';
+        }
+
+        function actualizarBarrasTexto(nivel) {
+            const barras = document.querySelectorAll('.bar-t');
+            barras.forEach((b, index) => {
+                b.style.background = index === nivel ? '#334155' : '#cbd5e1';
+            });
+        }
+        
+        let tipoContraste = 0; 
+        function toggleAltoContraste() {
+            tipoContraste = (tipoContraste + 1) % 3;
+            localStorage.setItem('modoContraste', tipoContraste);
+            aplicarContrasteVisual(tipoContraste);
+        }
+
+        function aplicarContrasteVisual(tipo) {
+            document.body.classList.remove('contraste-oscuro', 'contraste-suave');
+            if (tipo === 1) {
+                document.body.classList.add('contraste-oscuro');
+            } else if (tipo === 2) {
+                document.body.classList.add('contraste-suave');
+            }
+
+            const barras = document.querySelectorAll('.bar-c');
+            barras.forEach((b, index) => {
+                b.style.background = index === tipo ? '#334155' : '#cbd5e1';
+            });
+        }
+        
+        function actualizarBarraDoble(clase, activo) {
+            const barras = document.querySelectorAll(`.bar-${clase}`);
+            if (barras.length === 2) {
+                barras[0].style.background = activo ? '#cbd5e1' : '#334155';
+                barras[1].style.background = activo ? '#334155' : '#cbd5e1';
+            }
+        }
+
+        function toggleCursorGrande() {
+            document.body.classList.toggle('cursor-grande');
+            const activo = document.body.classList.contains('cursor-grande');
+            localStorage.setItem('cursorGrande', activo);
+            actualizarBarraDoble('u', activo);
+
+            if (activo) {
+                cursorDot.style.display = 'block';
+                cursorHalo.style.display = 'block';
+            } else {
+                cursorDot.style.display = 'none';
+                cursorHalo.style.display = 'none';
+            }
+        }
+
+        function toggleDislexia() {
+            document.body.classList.toggle('dislexia-amigable');
+            const activo = document.body.classList.contains('dislexia-amigable');
+            localStorage.setItem('dislexia', activo);
+            actualizarBarraDoble('d', activo);
+        }
+
+        function restablecerAccesibilidad() {
+            document.body.classList.remove('dislexia-amigable', 'cursor-grande', 'contraste-oscuro', 'contraste-suave');
+            document.body.style.fontSize = '';
+            nivelTexto = 0;
+            tipoContraste = 0;
+            localStorage.clear();
+
+            cursorDot.style.display = 'none';
+            cursorHalo.style.display = 'none';
+
+            actualizarBarrasTexto(0);
+            aplicarContrasteVisual(0);
+            actualizarBarraDoble('u', false);
+            actualizarBarraDoble('d', false);
+        }
+
+        // Lógica del Asistente IA
+        document.getElementById('ai-toggle-btn').addEventListener('click', function() {
+            const box = document.getElementById('ai-chat-box');
+            box.style.display = box.style.display === 'none' ? 'block' : 'none';
+        });
+        document.getElementById('ai-close-btn').addEventListener('click', function() {
+            document.getElementById('ai-chat-box').style.display = 'none';
+        });
+
+        document.getElementById('ai-send-btn').addEventListener('click', enviarMensajeIA);
+        document.getElementById('ai-user-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') enviarMensajeIA();
+        });
+
+        let consultaIaPendiente = false;
+        document.querySelectorAll('[data-ai-consulta]').forEach(boton => boton.addEventListener('click', () => {
+            if (consultaIaPendiente) return;
+            document.getElementById('ai-user-input').value = boton.dataset.aiConsulta;
+            enviarMensajeIA();
+        }));
+        function enviarMensajeIA() {
+            const input = document.getElementById('ai-user-input');
+            const mensaje = input.value.trim();
+            if (!mensaje || consultaIaPendiente) return;
+            consultaIaPendiente = true;
+            const enviar = document.getElementById('ai-send-btn');
+            enviar.disabled = true;
+            const abortar = new AbortController();
+            const timeout = setTimeout(() => abortar.abort(), 20000);
+
+            const container = document.getElementById('ai-chat-messages');
+            agregarMensajeChat(container, mensaje, '#2563eb', 'white', 'flex-end');
+            input.value = '';
+            container.scrollTop = container.scrollHeight;
+
+            const loadingId = 'loading-' + Date.now();
+            const loading = agregarMensajeChat(container, 'Analizando datos...', '#e2e8f0', '#475569', 'flex-start');
+            loading.id = loadingId;
+            container.scrollTop = container.scrollHeight;
+
+            fetch('/IA/Consultar', {
+                method: 'POST',
+                signal: abortar.signal,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                },
+                body: JSON.stringify({ pregunta: mensaje })
+            })
+            .then(async res => {
+                if (res.redirected || res.status === 401 || res.status === 403) throw new Error('Tu sesión terminó. Inicia sesión nuevamente.');
+                if (!(res.headers.get('content-type') || '').includes('application/json')) throw new Error('No pude completar la consulta. Inténtalo nuevamente.');
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.respuesta || 'No pude completar la consulta.');
+                return data;
+            })
+            .then(data => {
+                loading.remove();
+                agregarMensajeChat(container, data.respuesta, '#e2e8f0', '#0f172a', 'flex-start');
+                container.scrollTop = container.scrollHeight;
+            })
+            .catch(err => {
+                loading.remove();
+                agregarMensajeChat(container, err.name === 'AbortError' ? 'La consulta tardó demasiado. Prueba un período más corto.' : err.message, '#fee2e2', '#991b1b', 'flex-start');
+                container.scrollTop = container.scrollHeight;
+            })
+            .finally(() => {
+                clearTimeout(timeout);
+                consultaIaPendiente = false;
+                enviar.disabled = false;
+            });
+        }
+        function agregarMensajeChat(container, texto, fondo, color, alineacion) {
+            const mensaje = document.createElement('div');
+            mensaje.textContent = String(texto ?? '');
+            Object.assign(mensaje.style, { background: fondo, color, padding: '8px 12px', borderRadius: '8px', maxWidth: '85%', alignSelf: alineacion, whiteSpace: 'pre-wrap' });
+            container.appendChild(mensaje);
+            return mensaje;
+        }
+    </script>
+    
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

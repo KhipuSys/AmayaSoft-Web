@@ -1,0 +1,12 @@
+@model MiniMarket.Web.Models.UsuarioDatosModel
+<div class="mb-3">
+    <label asp-for="UsuarioAcceso" class="form-label fw-bold"></label>
+    <div class="input-group flex-nowrap">
+        <input asp-for="UsuarioAcceso" type="text" class="form-control" placeholder="nombre.apellido"
+               maxlength="64" pattern="[a-zA-Z0-9][a-zA-Z0-9._\-]{0,63}" autocomplete="off"
+               autocapitalize="none" spellcheck="false" aria-describedby="dominioCorreo" required />
+        <span id="dominioCorreo" class="input-group-text">@@amayasoft.com</span>
+    </div>
+    <span asp-validation-for="UsuarioAcceso" class="text-danger"></span>
+    <span asp-validation-for="Email" class="text-danger"></span>
+</div>

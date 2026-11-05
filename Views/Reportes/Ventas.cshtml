@@ -1,0 +1,162 @@
+@model IEnumerable<MiniMarket.Web.Models.ViewModels.ReporteVentasViewModel>
+
+@{
+    ViewData["Title"] = "Reporte de Ventas y Ganancias";
+    decimal totalIngresos = Model.Sum(m => m.TotalVenta);
+    var completos = Model.Where(m => m.CostoTotal.HasValue).ToList();
+    decimal totalCostos = completos.Sum(m => m.CostoTotal ?? 0);
+    decimal gananciaNetaTotal = completos.Sum(m => m.GananciaNeta ?? 0);
+    decimal ingresosConCosto = completos.Sum(m => m.TotalVenta);
+    decimal margenPromedio = ingresosConCosto > 0 ? (gananciaNetaTotal / ingresosConCosto) * 100 : 0;
+}
+
+<div class="container-fluid py-3">
+    @if (Model.Any(m => !m.CostoTotal.HasValue))
+    {
+        <div class="alert alert-info">Las ventas antiguas sin costo histórico aparecen como N/D. Costos, utilidad bruta y margen solo incluyen ventas con costo registrado; no se estiman usando el costo actual.</div>
+    }
+    <!-- Encabezado y Filtro -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" asp-action="Ventas" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <h4 class="fw-bold mb-1"><i class="fas fa-chart-line amaya-title-icon"></i>Reporte Financiero de Ventas</h4>
+                    <p class="text-muted small mb-0">Consolidado de transacciones, rentabilidad y márgenes de ganancia.</p>
+                </div>
+                <div class="col-md-3">
+                    <label for="fechaInicio" class="form-label small fw-bold">Fecha Inicio</label>
+                    <input type="date" id="fechaInicio" name="fechaInicio" class="form-control form-control-sm" value="@ViewBag.FechaInicio" />
+                </div>
+                <div class="col-md-3">
+                    <label for="fechaFin" class="form-label small fw-bold">Fecha Fin</label>
+                    <input type="date" id="fechaFin" name="fechaFin" class="form-control form-control-sm" value="@ViewBag.FechaFin" />
+                </div>
+                <div class="col-md-2 d-grid">
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        <i class="fas fa-filter me-1"></i> Filtrar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Indicadores Financieros -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted small mb-1">Ingresos Totales</h6>
+                    <h4 class="fw-bold mb-0">S/. @totalIngresos.ToString("N2")</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted small mb-1">Costo de Mercadería</h6>
+                    <h4 class="fw-bold text-secondary mb-0">S/. @totalCostos.ToString("N2")</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted small mb-1">Utilidad bruta (con costo registrado)</h6>
+                    <h4 class="fw-bold text-success mb-0">S/. @gananciaNetaTotal.ToString("N2")</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted small mb-1">Margen de Rentabilidad</h6>
+                    <h4 class="fw-bold text-warning mb-0">@margenPromedio.ToString("N1") %</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla con Exportación Datatables -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header amaya-card-header">
+            <h5 class="mb-0"><i class="fas fa-table me-2"></i>Detalle financiero</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table id="tblReporteVentas" class="table table-striped table-hover align-middle w-100">
+                    <thead class="table-light">
+                        <tr>
+                            <th>N° Ticket</th>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Cajero</th>
+                            <th>Método</th>
+                            <th class="text-center">Cant.</th>
+                            <th class="text-end">Venta Total</th>
+                            <th class="text-end">Costo</th>
+                            <th class="text-end">Ganancia</th>
+                            <th class="text-center">Margen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="fw-bold">#@item.VentaId.ToString("D5")</td>
+                                <td>@item.Fecha.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@item.Cliente</td>
+                                <td>@item.Cajero</td>
+                                <td><span class="badge bg-light text-dark border">@item.MetodoPago</span></td>
+                                <td class="text-center">@item.CantidadArticulos</td>
+                                <td class="text-end fw-bold text-dark">S/. @item.TotalVenta.ToString("N2")</td>
+                                <td class="text-end text-muted">@(item.CostoTotal.HasValue ? "S/. " + item.CostoTotal.Value.ToString("N2") : "N/D")</td>
+                                <td class="text-end fw-bold text-success">@(item.GananciaNeta.HasValue ? "S/. " + item.GananciaNeta.Value.ToString("N2") : "N/D")</td>
+                                <td class="text-center">
+                                    <span class="badge @(item.MargenPorcentaje >= 20 ? "bg-success" : "bg-warning text-dark")">
+                                        @(item.MargenPorcentaje.HasValue ? item.MargenPorcentaje + " %" : "N/D")
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            $('#tblReporteVentas').DataTable({
+                dom: '<"d-flex justify-content-between align-items-center mb-3"Bf>rt<"d-flex justify-content-between align-items-center mt-3"ip>',
+                buttons: [
+                    {
+                        extend: 'excelHtml5',
+                        text: '<i class="fas fa-file-excel me-1"></i> Exportar a Excel',
+                        className: 'btn btn-sm btn-success',
+                        title: 'Reporte_Ventas_AmayaSoft'
+                    },
+                    {
+                        extend: 'pdfHtml5',
+                        text: '<i class="fas fa-file-pdf me-1"></i> Exportar a PDF',
+                        className: 'btn btn-sm btn-danger',
+                        orientation: 'landscape',
+                        pageSize: 'A4',
+                        title: 'Reporte de Ventas y Rentabilidad - AmayaSoft'
+                    },
+                    {
+                        extend: 'print',
+                        text: '<i class="fas fa-print me-1"></i> Imprimir',
+                        className: 'btn btn-sm btn-secondary'
+                    }
+                ],
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json'
+                },
+                order: [[1, 'desc']],
+                pageLength: 10
+            });
+        });
+    </script>
+}

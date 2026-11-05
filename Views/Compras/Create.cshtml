@@ -1,0 +1,262 @@
+@model MiniMarket.Web.Models.Compra
+
+@{
+    ViewData["Title"] = "Ingreso de Mercadería";
+}
+
+@Html.AntiForgeryToken()
+<div class="row">
+    <div class="col-md-4">
+        <div class="card shadow border-0 mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-file-invoice me-2"></i>Datos de Compra</h5>
+            </div>
+            <div class="card-body">
+                <form id="frmCompra">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Buscar Proveedor</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-truck"></i></span>
+                            <select id="cboProveedor" class="form-select" style="width: 85%;"></select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">N° Factura / Documento</label>
+                        <input type="text" class="form-control" id="txtNumeroDocumento" placeholder="Ej: F001-00045" required />
+                    </div>
+
+                    <hr />
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Buscar Producto</label>
+                         <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
+                            <select id="cboProducto" class="form-select" style="width: 85%;"></select>
+                        </div>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label small text-muted fw-bold">COSTO UNIT.</label>
+                            <input type="number" class="form-control" id="txtPrecioCompra" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted fw-bold">CANTIDAD</label>
+                            <input type="number" class="form-control" id="txtCantidad" value="1" min="1">
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid mt-3">
+                        <button type="button" class="btn btn-success" id="btnAgregar">
+                            <i class="fas fa-plus-circle me-2"></i> AGREGAR AL DETALLE
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow border-0">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 text-primary"><i class="fas fa-boxes me-2"></i>Productos a Ingresar</h5>
+                <h3 class="fw-bold text-success m-0" id="txtTotal">S/. 0.00</h3>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive" style="max-height: 450px; overflow-y: auto;">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th class="ps-3">Producto</th>
+                                <th class="text-center">Cant.</th>
+                                <th class="text-end">Costo</th>
+                                <th class="text-end">SubTotal</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaDetalle"></tbody>
+                    </table>
+                </div>
+                
+                <div id="emptyState" class="text-center py-5 text-muted">
+                    <i class="fas fa-truck-loading fa-3x mb-3 opacity-25"></i>
+                    <p>Agrega productos desde el panel izquierdo</p>
+                </div>
+            </div>
+            <div class="card-footer bg-light text-end">
+                <button class="btn btn-secondary me-2" onclick="location.href='@Url.Action("Index")'">Cancelar</button>
+                <button class="btn btn-primary btn-lg px-4" id="btnTerminar">
+                    <i class="fas fa-save me-2"></i> GUARDAR INGRESO
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        let _productosLista = [];
+        let _total = 0;
+
+        $(document).ready(function() {
+            // 1. PROVEEDORES
+            $('#cboProveedor').select2({
+                ajax: {
+                    url: '@Url.Action("BuscarProveedores", "Proveedores")',
+                    dataType: 'json',
+                    delay: 250,
+                    data: function(params) { return { term: params.term || '', page: params.page || 1 }; },
+                    processResults: function(data) { return data; }
+                },
+                placeholder: 'Seleccionar o buscar proveedor...',
+                minimumInputLength: 0,
+                language: { noResults: () => 'No hay proveedores activos que coincidan', errorLoading: () => 'No se pudieron cargar los proveedores.' },
+                theme: 'bootstrap-5',
+                width: '100%'
+            });
+
+            // 2. PRODUCTOS
+            $('#cboProducto').select2({
+                ajax: {
+                    url: '@Url.Action("BuscarProductos", "Compras")', 
+                    dataType: 'json',
+                    delay: 250,
+                    data: function(params) { return { term: params.term || '', page: params.page || 1 }; },
+                    processResults: function(data) { return data; }
+                },
+                placeholder: 'Seleccionar o buscar producto...',
+                minimumInputLength: 0,
+                language: { noResults: () => 'No hay productos activos que coincidan', errorLoading: () => 'No se pudieron cargar los productos.' },
+                theme: 'bootstrap-5',
+                width: '100%'
+            });
+
+            $('#cboProducto').on('select2:select', function(e) { $('#txtPrecioCompra').val(Number(e.params.data.precio).toFixed(2)).focus(); });
+
+            // --- AUTO-CARGAR PRODUCTO SUGERIDO DE PREDICCIÓN ---
+            @if (ViewBag.PreloadProductoId != null)
+            {
+                <text>
+                let preId = @ViewBag.PreloadProductoId;
+                let preNombre = @Html.Raw(Json.Serialize((string)ViewBag.PreloadNombre));
+                let preCosto = @ViewBag.PreloadCosto.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                let preCantidad = @ViewBag.PreloadCantidad;
+
+                _productosLista.push({
+                    ProductoId: preId,
+                    Nombre: preNombre,
+                    Precio: preCosto,
+                    Cantidad: preCantidad,
+                    Total: preCosto * preCantidad
+                });
+
+                renderizarTabla();
+                </text>
+            }
+
+            // 3. AGREGAR
+            $('#btnAgregar').click(function() {
+                let idProd = $('#cboProducto').val();
+                let nombreProd = $('#cboProducto').select2('data')[0]?.nombre || $('#cboProducto option:selected').text();
+                let precio = parseFloat($('#txtPrecioCompra').val());
+                let cantidad = Number($('#txtCantidad').val());
+
+                if (!idProd) { Swal.fire('Aviso', 'Seleccione un producto', 'warning'); return; }
+                if (isNaN(precio) || precio <= 0) { Swal.fire('Aviso', 'Ingrese un costo válido', 'warning'); return; }
+                if (!Number.isInteger(cantidad) || cantidad <= 0) { Swal.fire('Aviso', 'Ingrese una cantidad entera positiva.', 'warning'); return; }
+
+                _productosLista.push({
+                    ProductoId: idProd,
+                    Nombre: nombreProd,
+                    Precio: precio,
+                    Cantidad: cantidad,
+                    Total: precio * cantidad
+                });
+
+                renderizarTabla();
+                limpiarInputs();
+            });
+
+            // 4. TERMINAR
+            $('#btnTerminar').click(function() {
+                if (_productosLista.length === 0) { Swal.fire('Error', 'No hay productos en el detalle', 'error'); return; }
+                
+                let proveedorId = $('#cboProveedor').val();
+                if (!proveedorId) { Swal.fire('Error', 'Seleccione un proveedor', 'error'); return; }
+
+                let compraModelo = {
+                    ProveedorId: proveedorId,
+                    NumeroDocumento: $('#txtNumeroDocumento').val(),
+                    Total: Number(_total.toFixed(2)),
+                    Detalles: _productosLista.map(p => ({ ...p, Total: Number(p.Total.toFixed(2)) }))
+                };
+
+                Swal.fire({
+                    title: '¿Guardar Compra?',
+                    text: 'Se actualizará el stock de los productos',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, Guardar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: '@Url.Action("Registrar", "Compras")',
+                            type: 'POST',
+                            contentType: 'application/json',
+                            headers: { 'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').first().val() },
+                            data: JSON.stringify(compraModelo),
+                            success: function(resp) {
+                                if (resp.exito) {
+                                    Swal.fire('Éxito', 'Mercadería ingresada correctamente', 'success').then(() => {
+                                        window.location.href = '@Url.Action("Index")';
+                                    });
+                                } else {
+                                    Swal.fire('Error', resp.mensaje, 'error');
+                                }
+                            },
+                            error: function() {
+                                Swal.fire('Error', 'Error al procesar la solicitud', 'error');
+                            }
+                        });
+                    }
+                });
+            });
+        });
+
+        function renderizarTabla() {
+            let html = '';
+            _total = 0;
+            if(_productosLista.length > 0) $('#emptyState').hide();
+
+            _productosLista.forEach((item, index) => {
+                _total += item.Total;
+                html += `
+                    <tr>
+                        <td class="ps-3 fw-bold">${$('<div>').text(item.Nombre).html()}</td>
+                        <td class="text-center">${item.Cantidad}</td>
+                        <td class="text-end">${item.Precio.toFixed(2)}</td>
+                        <td class="text-end fw-bold text-success">${item.Total.toFixed(2)}</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-danger" onclick="eliminarItem(${index})"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>`;
+            });
+
+            $('#tablaDetalle').html(html);
+            $('#txtTotal').text('S/. ' + _total.toFixed(2));
+        }
+
+        function eliminarItem(index) {
+            _productosLista.splice(index, 1);
+            renderizarTabla();
+            if(_productosLista.length === 0) $('#emptyState').show();
+        }
+
+        function limpiarInputs() {
+            $('#cboProducto').val(null).trigger('change');
+            $('#txtPrecioCompra').val('');
+            $('#txtCantidad').val(1);
+        }
+    </script>
+}

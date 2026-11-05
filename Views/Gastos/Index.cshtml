@@ -1,0 +1,77 @@
+@model IEnumerable<MiniMarket.Web.Models.Gasto>
+
+@{
+    ViewData["Title"] = "Historial de Gastos Operativos";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="text-danger"><i class="fas fa-hand-holding-usd me-2"></i>Historial de Gastos</h2>
+        <p class="text-muted">Registro auditado de salidas de dinero e incidencias en caja.</p>
+    </div>
+</div>
+
+<div class="card shadow border-0">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle" id="tablaGastos">
+                <thead class="bg-light">
+                    <tr>
+                        <th>Fecha y Hora</th>
+                        <th>Concepto / Motivo</th>
+                        <th>Cajero / Responsable</th>
+                        <th class="text-end">Monto Extraído</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>
+                                <i class="far fa-calendar-alt text-muted me-2"></i>
+                                @item.Fecha.ToString("dd/MM/yyyy HH:mm")
+                            </td>
+                            <td class="fw-bold">@item.Concepto</td>
+                            <td>
+                                <small class="text-muted">
+                                    <i class="fas fa-user-circle me-1"></i>
+                                    @(item.Usuario != null ? item.Usuario.UserName : "Sistema")
+                                </small>
+                            </td>
+                            <td class="text-end fw-bold text-danger">
+                                S/. @item.Monto.ToString("N2")
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot class="bg-light">
+                    <tr>
+                        <th colspan="3" class="text-end fw-bold">TOTAL GASTOS:</th>
+                        <th class="text-end text-danger fs-5 fw-bold">S/. @Model.Sum(g => g.Monto).ToString("N2")</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            if ($.fn.DataTable.isDataTable('#tablaGastos')) {
+                $('#tablaGastos').DataTable().destroy();
+            }
+
+            $('#tablaGastos').DataTable({
+                dom: '<"row"<"col-sm-12 col-md-4"B><"col-sm-12 col-md-4"l><"col-sm-12 col-md-4"f>>rtip',
+                buttons: [
+                    { extend: 'excelHtml5', text: '<i class="fas fa-file-excel"></i> Excel', className: 'btn btn-success btn-sm' },
+                    { extend: 'pdfHtml5', text: '<i class="fas fa-file-pdf"></i> PDF', className: 'btn btn-danger btn-sm' },
+                    { extend: 'print', text: '<i class="fas fa-print"></i> Imprimir', className: 'btn btn-info btn-sm text-white' }
+                ],
+                "order": [[ 0, "desc" ]],
+                language: { url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/es-ES.json' }
+            });
+        });
+    </script>
+}

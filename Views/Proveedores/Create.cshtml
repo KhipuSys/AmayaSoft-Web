@@ -1,0 +1,107 @@
+@model MiniMarket.Web.Models.Proveedor
+
+@{
+    ViewData["Title"] = "Nuevo Proveedor";
+}
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow border-0">
+                <div class="card-header bg-dark text-white py-3">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-truck me-2"></i>Registrar Proveedor</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form asp-action="Create">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="Ruc" class="form-label fw-bold"></label>
+                            <div class="input-group">
+                                <input asp-for="Ruc" class="form-control" placeholder="Ej: 20123456789" maxlength="11" />
+                                <button class="btn btn-outline-primary" type="button" id="btnConsultarDocumento">
+                                    <i class="fas fa-search me-1"></i> Consultar
+                                </button>
+                            </div>
+                            <small id="consultaDocumentoMensaje" class="form-text" role="status" aria-live="polite">La consulta es opcional. Si el servicio no responde, ingresa los datos del proveedor manualmente.</small>
+                            <span asp-validation-for="Ruc" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="RazonSocial" class="form-label fw-bold"></label>
+                            <input asp-for="RazonSocial" class="form-control" placeholder="Ej: Distribuidora ABC S.A.C." />
+                            <span asp-validation-for="RazonSocial" class="text-danger"></span>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Contacto" class="form-label fw-bold"></label>
+                                <input asp-for="Contacto" class="form-control" placeholder="Nombre del vendedor" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label asp-for="Telefono" class="form-label fw-bold"></label>
+                                <input asp-for="Telefono" class="form-control" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Correo" class="form-label fw-bold"></label>
+                            <input asp-for="Correo" class="form-control" type="email" placeholder="contacto@proveedor.com" />
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Direccion" class="form-label fw-bold"></label>
+                            <textarea asp-for="Direccion" class="form-control" rows="2"></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+                            <button type="submit" class="btn btn-primary fw-bold">
+                                <i class="fas fa-save me-2"></i> Guardar Proveedor
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+
+    <script>
+        $(function () {
+            $('#btnConsultarDocumento').on('click', function () {
+                const documento = $('#Ruc').val().trim();
+                const $mensaje = $('#consultaDocumentoMensaje');
+                const $boton = $(this);
+
+                $mensaje.removeClass('text-danger text-success').addClass('text-muted').text('Consultando RUC...');
+                $boton.prop('disabled', true);
+
+                $.get('@Url.Action("ConsultarDocumento", "Proveedores")', { documento })
+                    .done(function (respuesta) {
+                        if (!respuesta.exito) {
+                            $mensaje.removeClass('text-muted text-success').addClass('text-danger').text(respuesta.mensaje || 'No se pudo consultar el RUC.');
+                            return;
+                        }
+
+                        $('#RazonSocial').val(respuesta.nombre || '');
+
+                        if (respuesta.direccion) {
+                            $('#Direccion').val(respuesta.direccion);
+                        }
+
+                        $mensaje.removeClass('text-muted text-danger').addClass('text-success').text('RUC verificado correctamente.');
+                    })
+                    .fail(function () {
+                        $mensaje.removeClass('text-muted text-success').addClass('text-danger').text('Error al consultar la API.');
+                    })
+                    .always(function () {
+                        $boton.prop('disabled', false);
+                    });
+            });
+        });
+    </script>
+}
